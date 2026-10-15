@@ -7,6 +7,8 @@ from ros_gz_interfaces.srv import DeleteEntity, SpawnEntity
 
 # import math
 import random
+from pathlib import Path
+from ament_index_python.packages import get_package_share_directory
 
 class PenaltyShooter(Node): 
     # inherit from Node
@@ -20,10 +22,8 @@ class PenaltyShooter(Node):
 
         self._spawn_client = self.create_client(SpawnEntity, '/world/goalkeeper_world/create')
 
-        self._ball_model_path = (
-            '/home/yla0123/mie1075_ws/src/'
-            'goalkeeper_sim/models/soccer_ball/model.sdf'
-        )
+        sim_share = Path(get_package_share_directory('goalkeeper_sim'))
+        self._ball_model_path = sim_share / 'models' / 'soccer_ball' / 'model.sdf'
 
         # start the shot after 1 sec
         self._kick_timer = self.create_timer(1.0, self._kick_after_reset) 
