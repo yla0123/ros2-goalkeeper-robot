@@ -1,88 +1,51 @@
-# Regulation-Size Goal and Adult Goalkeeper Model
+# Fixed Diamond Goalkeeper
 
-Status: software planning and generated Gazebo geometry. The goal uses regulation 11-a-side dimensions. The keeper is an adult-sized rigid silhouette with the original sideways movement and left/right tilt.
+The robot uses one fixed **solid diamond panel** over a narrower **fixed rectangular panel** on the existing wheeled base. Both panels move with the base. There are no shoulder, elbow or tilt actuators in this version.
 
-## 1. Input and movement
+![Dimensioned front view](images/goalkeeper-scale.svg)
 
-The input is the ball-centre coordinate where the ball is predicted to cross the goal plane, plus its arrival time. In `goal_frame`, the goal plane is `x = 0`; the planner accepts `(0, y, z)` and returns the robot target `(slide_m, tilt_rad)`. A current ball position first needs a crossing prediction.
+The front carries one continuous goalkeeper portrait across the two plates: the face and bent arms appear on the diamond, and the rest of the figure continues on the rectangle. The artwork is a visual decal; the plate outlines, collision geometry and slide motion stay the same.
 
-The two controlled axes are `slide_joint` along +Y and `tilt_joint` about +X. Positive tilt tips the upper body toward -Y. Head, torso, arms, gloves, legs, and feet form one rigid body. Individual limb movement, jumping, and athlete biomechanics are outside this model.
+| Part | Dimensions and placement |
+| --- | --- |
+| Upper diamond | Horizontal tip-to-tip **1,450 mm**; vertical tip-to-tip **900 mm**; four edges **853.3 mm** each |
+| Diamond reference points | Centre **1,700 mm above ground**; side points **725 mm** from centreline; upper tip **2,150 mm**; lower tip **1,250 mm** above ground |
+| Diamond edge angles | **31.83°** to the horizontal; left/right tip interior angles **63.65°**; upper/lower tip interior angles **116.35°** |
+| Lower rectangle | **500 mm wide × 1,130 mm high**, from **220 mm to 1,350 mm** above ground |
+| Connection geometry | **100 mm** vertical overlap in the front projection; diamond mounted immediately in front of the rectangle, with the two plate faces touching in the model |
+| Model plate thickness | **40 mm** for each panel; geometry assumption only, not a structural thickness or material specification |
+| Wheeled base | **850 mm wide × 750 mm deep × 220 mm high**, including the wheels |
+| Overall assembly | **2,150 mm high**; maximum width **1,450 mm** at the diamond |
+| Goal / penalty mark | Outside frame **7.56 × 2.56 m**; clear opening **7.32 × 2.44 m**; diameter **0.12 m**; penalty distance **11.00 m** |
 
-## 2. Planning geometry
+For a flat layout, set the diamond centre at (0, 0) mm and mark (−725, 0), (0, +450), (+725, 0), and (0, −450). Connect adjacent points. The dimensions above define the outline; mounting brackets and structural strength are outside this simulation.
 
-| Item | Value | Basis |
-| --- | ---: | --- |
-| Goal clear opening | 7.32 m wide x 2.44 m high | IFAB Law 1: inside faces of posts and underside of crossbar |
-| Penalty mark | 11.00 m from the back edge of the goal line | IFAB Law 1 |
-| Goal member diameter | 0.12 m | Model choice within the Law 1 maximum |
-| Keeper body height | 1.90 m, sole to crown | Generic adult goalkeeper assumption |
-| Hand-to-hand span | 1.90 m | Model assumption with arms extended sideways |
-| Torso width | 0.50 m | Model assumption; limbs have separate blocking shapes |
-| Nominal body mass | 85 kg | Simulation inertia assumption, not a FIFA requirement |
-| Slide joint travel | -3.20 m to +3.20 m | Model limit; full-body clearance further restricts poses near the posts |
-| Tilt range | -45 deg to +45 deg | Original left/right tilt motion |
-| Hip-like pivot height | 1.00 m above the ground | Fixed robot pivot shared by the planner and URDF |
-| Upright foot clearance | 0.05 m | Mounted silhouette; allows continuous tilt without feet entering the floor |
-| Upright crown height | 1.95 m above the ground | 1.90 m body plus 0.05 m mounting clearance |
-| Ball radius | 0.11 m | Approximate size-5 ball geometry |
-| Contact allowance | At least 0.05 m in the distance-based footprint check | Planning margin, not a measured save criterion |
+The plate generator writes a closed rhombus prism. The URDF uses the same mesh for appearance and collision, and the planner uses its exact four-sided front projection, not its enclosing rectangle. The base stays level and uses `slide_joint` to approximate lateral rolling. It has a travel range of ±2.65 m, speed limit 2.0 m/s and acceleration limit 4.0 m/s². The body is one fixed assembly, so there are no articulated self-collisions. A planned slide must still clear the pitch, posts and crossbar.
 
-The goal dimensions are official. FIFA does not prescribe one goalkeeper height or arm span. The [FIFA 2022 squad lists](https://fdp.fifa.org/assetspublic/ce44/pdf/SquadLists-English.pdf) list Manuel Neuer at 1.93 m and Thibaut Courtois at 1.99 m. The 1.90 m keeper here is a generic modelling choice, not a tournament average or a particular player's digital replica. See [IFAB Law 1](https://theifab.com/laws/latest/the-field-of-play/) for the official goal and penalty-mark measurements.
+The simulation keeps 85 kg of mobile mass: 38 kg chassis shell, 4 × 1 kg wheels, 25 kg lower assembly and 18 kg upper assembly. The URDF generator computes inertia using box, cylinder and uniform rhombus-prism assumptions. The ideal net lateral force is 85 × 4.0 = 340 N, excluding rolling loss and traction. These are simulation values.
 
-![Regulation goal and adult goalkeeper scale](images/goalkeeper-scale.svg)
+## Run and check
 
-## 3. Shared geometry and coverage
-
-[keeper.design.json](../config/keeper.design.json) is the source for the planner and generated robot geometry. Eleven body-part rectangles define the union of occupied blocking regions. Empty space around the head, between arms and torso, and between the legs is not filled by a single large rectangle.
-
-Gazebo collision boxes use the same body parts and dimensions. The planner transforms them for slide and tilt, checks contact against the nearest occupied part, and checks the swept body against the floor, posts, and crossbar. Its swept bound is conservative and may reject a synchronized path that would actually fit. This is a 2D geometric contact test, not an impact or save model.
-
-The goal plane is at world X = 10.00 m. Goal-member centres are at X = 9.94 m, so their back edge is at the goal plane. Post centres are at Y = +/-3.72 m and the crossbar centre is at Z = 2.50 m. With 0.06 m radii, the clear opening is exactly 7.32 m x 2.44 m. The penalty spot and initial ball are at world X = -1.00 m. The existing field is a cropped penalty-training scene.
-
-After changing the geometry configuration, regenerate the assets, then rebuild the ROS packages:
-
-```text
+```bash
 python3 tools/generate_geometry.py
-```
-
-The generator updates the URDF, goal geometry, penalty mark, initial ball position, and scale drawing.
-
-## 4. Timing and reachability
-
-| Timing item | Value | Status |
-| --- | ---: | --- |
-| Kick to goal-plane crossing | 0.55 s | User-supplied shot assumption |
-| Recognition, prediction, and communication | 0.10 s | Budget example to measure later |
-| Time remaining | 0.45 s | 0.55 - 0.10 s |
-| Settling reserve | 0.02 s | Model margin |
-| Available axis motion time | 0.43 s | 0.45 - 0.02 s |
-
-Speed and acceleration assumptions remain 2.0 m/s and 12 m/s^2 for slide, and 4.0 rad/s and 20 rad/s^2 for tilt. They are not measured athlete or robot performance. Enlarging the goal does not make every shot reachable: a 3.20 m translation from centre alone requires about 1.767 s under these limits. The planner reports unreachable shots instead of inventing faster motion.
-
-The offline sampled search has not been optimized or validated against the 0.10 s processing budget. Its execution time must be measured before real-time use.
-
-For the built-in crossing point `(0, 1.30, 1.40) m`, the model selects approximately `slide = +0.22 m` and `tilt = -9 deg`. Movement begins at 0.10 s, finishes at about 0.371 s after the kick, and holds through the 0.55 s arrival. This is a calculated trajectory.
-
-## 5. Run and inspect the action path
-
-The demo has a built-in input and needs no example-data folder:
-
-```text
-python3 run_keeper.py demo
-python3 run_keeper.py demo --path-csv action_path.csv
-python3 run_keeper.py plan --y-m 1.30 --z-m 1.40 --arrival-time-s 0.55 --elapsed-s 0.10
-```
-
-Use `--input path/to/shot.json` for custom data containing `crossing_point_m`, `flight_time_from_kick_s`, `elapsed_since_kick_s`, and optional `robot_state`. Coordinates use metres, angles radians, and times seconds.
-
-JSON output includes timing, reachability, the selected pose, action-path checkpoints, and a serial codec preview. CSV export includes the complete time-indexed path. No serial connection is opened and no robot is moved.
-
-## 6. Validation and implementation boundary
-
-```text
 python3 tests/test_regulation_geometry.py -v
+python3 run_keeper.py demo --case low --path-csv action_path.csv
 ```
 
-The checks cover the clear goal opening, penalty distance, matching URDF and planner geometry, empty-space handling, preserved slide/tilt axes, motion limits, deadlines, stationary poses, and CSV export.
+Build as in the [README](../readme.md), then launch with `ros2 launch goalkeeper_sim simulation.launch.py`. For a manual check, run one command at a time after `/keeper/ready` is true:
 
-The repository includes a ROS 2 shooter node, a robot-description package, and a Gazebo launch file. Executing a planned joint path, implementing custom ROS messages and perception, and verifying an end-to-end save remain integration work. A model and passing planner tests do not establish a physical save rate.
+```bash
+ros2 topic pub --once /keeper/manual_pose std_msgs/msg/String '{data: "{\"slide_m\": 0.35}"}'
+ros2 topic pub --once /keeper/manual_pose std_msgs/msg/String '{data: "{\"slide_m\": -0.35}"}'
+ros2 topic echo /joint_states --once
+```
+
+Start a fresh launch for each deterministic trial with `shoot:=true shot_case:=center`, `shot_case:=low` or `shot_case:=high_corner`. Check `/keeper/shot_result` for the observed goal decision, separate from the planner result.
+
+| Trial (goal-plane Y, Z) | Offline result |
+| --- | --- |
+| Centre (0.00, 1.28 m) | Reachable from centre; no slide required |
+| Low (+0.56, 0.11 m) | Reachable; slides +0.08 m, about 0.283 s of motion |
+| High corner (+3.44, 2.27 m) | Unreachable; above the fixed panel's coverage |
+
+The base centre is aligned to the goal line and the diamond face lies on the pitch side, so the panel can contact the ball before it crosses. The offline motion budget is 0.405 s (0.55 s flight minus 0.10 s processing, 0.02 s settling and a 0.025 s early-contact reserve). The reserve approximates the earliest front-face contact at about 20 m/s; it is not a measured timing guarantee. Runtime also reserves 0.012 s for the bridge. These checks do not establish physical saves. Live ROS 2/Gazebo launch, collision response and tracking remain unverified on this Windows machine.

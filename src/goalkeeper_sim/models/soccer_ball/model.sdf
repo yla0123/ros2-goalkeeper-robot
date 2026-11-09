@@ -1,45 +1,43 @@
-<?xml version="1.0" ?>
+<?xml version='1.0' encoding='utf-8'?>
 <sdf version="1.9">
-
-    <model name="soccer_ball">
-
-
-        <link name="ball_link">
-            <inertial>
-                <mass>0.43</mass>
-
-                <inertia>
-                    <ixx>0.00208</ixx>
-                    <iyy>0.00208</iyy>
-                    <izz>0.00208</izz>
-
-                    <ixy>0</ixy>
-                    <ixz>0</ixz>
-                    <iyz>0</iyz>
-                </inertia>
-            </inertial>
-
-            <collision name="ball_collision">
-                <geometry>
-                    <sphere>
-                        <radius>0.11</radius>
-                    </sphere>
-                </geometry>
-            </collision>
-
-            <visual name="ball_vision">
-                <geometry>
-                    <sphere>
-                        <radius>0.11</radius>
-                    </sphere>
-                </geometry>
-
-                <material>
-                    <ambient>1 1 1 1</ambient>
-                    <diffuse>1 1 1 1</diffuse>
-                </material>
-            </visual>
-        </link>
-    </model>
-
+  <model name="soccer_ball">
+    <link name="ball_link">
+      <inertial>
+        <mass>0.43</mass>
+        <inertia>
+          <ixx>0.0020812</ixx>
+          <iyy>0.0020812</iyy>
+          <izz>0.0020812</izz>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyz>0</iyz>
+        </inertia>
+      </inertial>
+      <collision name="ball_collision">
+        <geometry>
+          <sphere>
+            <radius>0.11</radius>
+          </sphere>
+        </geometry>
+      </collision>
+      <visual name="ball_vision">
+        <geometry>
+          <sphere>
+            <radius>0.11</radius>
+          </sphere>
+        </geometry>
+        <material>
+          <ambient>1 1 1 1</ambient>
+          <diffuse>1 1 1 1</diffuse>
+        </material>
+      </visual>
+    </link>
+    <plugin name="gz::sim::systems::PosePublisher" filename="gz-sim-pose-publisher-system">
+      <publish_link_pose>false</publish_link_pose>
+      <publish_model_pose>true</publish_model_pose>
+      <use_pose_vector_msg>false</use_pose_vector_msg>
+      <update_frequency>200</update_frequency>
+      <topic>/model/soccer_ball/pose</topic>
+    </plugin>
+  </model>
 </sdf>

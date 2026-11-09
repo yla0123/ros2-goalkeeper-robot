@@ -1,0 +1,204 @@
+#!/usr/bin/env python3
+"""ROS 2 adapter for checked keeper trajectories and simulated goal decisions."""
+import json
+from pathlib import Path
+from time import monotonic
+
+from ament_index_python.packages import get_package_share_directory
+from geometry_msgs.msg import PoseStamped
+import rclpy
+from rclpy.duration import Duration
+from rclpy.node import Node
+from rclpy.qos import QoSProfile, DurabilityPolicy, qos_profile_sensor_data
+from sensor_msgs.msg import JointState
+from std_msgs.msg import Bool, String
+from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
+
+from goalkeeper_control.model import CrossingTarget, Design, JOINT_NAMES, Pose, finite
+from goalkeeper_control.planner import motion_samples, move_duration, plan, swept_clearance
+from goalkeeper_control.protocol import goal_crossing, state_pose
+
+
+class KeeperSim(Node):
+    def __init__(self):
+        super().__init__("keeper_sim")
+        config = Path(get_package_share_directory("goalkeeper_sim")) / "config/keeper.design.json"
+        self.design = Design.load(config)
+        self.axes = (self.design.slide,)
+        self.joints = None
+        self.busy_until = 0.0
+        self.shot = None
+        self.previous_ball = None
+        self.writer = self.create_publisher(JointTrajectory, "/model/goalkeeper_robot/joint_trajectory", 10)
+        self.ready = self.create_publisher(Bool, "/keeper/ready", 10)
+        qos = QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL)
+        self.results = self.create_publisher(String, "/keeper/shot_result", qos)
+        self.create_subscription(JointState, "/joint_states", self.on_joints, qos_profile_sensor_data)
+        self.create_subscription(PoseStamped, "/model/soccer_ball/pose", self.on_ball, qos_profile_sensor_data)
+        self.create_subscription(String, "/keeper/manual_pose", self.on_manual, 10)
+        self.create_subscription(String, "/keeper/prediction", self.on_prediction, 10)
+        self.create_subscription(String, "/keeper/shot", self.on_shot, 10)
+        self.create_timer(0.01, self.tick)
+
+    def now(self):
+        return self.get_clock().now().nanoseconds / 1e9
+
+    def on_joints(self, msg):
+        self.joints = (self.now(), msg)
+
+    def pose(self):
+        if self.joints is None or self.now() - self.joints[0] > 0.10:
+            raise ValueError("No fresh joint feedback")
+        msg = self.joints[1]
+        values = state_pose(msg.name, msg.position, msg.velocity, JOINT_NAMES, self.axes,
+                            (0.02,))
+        if values is None or self.now() < self.busy_until:
+            raise ValueError("Keeper is moving or its joint feedback is incomplete")
+        return Pose(*values)
+
+    def send(self, start, end, duration):
+        if not swept_clearance(start, end, self.design):
+            raise ValueError("Path rejected by frame or self-collision checks")
+        if self.writer.get_subscription_count() == 0:
+            raise ValueError("No trajectory bridge subscription")
+        msg = JointTrajectory(joint_names=list(JOINT_NAMES))
+        lead = self.design.simulation["trajectory_lead_s"]
+        # Gazebo Harmonic starts these relative samples when it receives the message.
+        msg.header.stamp = self.get_clock().now().to_msg()
+        for t, states in motion_samples(start, end, duration, self.design):
+            point = JointTrajectoryPoint()
+            # Gazebo tracks dense position samples with PID. Velocity and effort PID inputs stay empty.
+            point.positions = [q[0] for q in states]
+            point.time_from_start = Duration(seconds=t).to_msg()
+            msg.points.append(point)
+        self.writer.publish(msg)
+        self.busy_until = self.now() + lead + duration + 0.02
+
+    def on_manual(self, msg):
+        try:
+            if self.shot:
+                raise ValueError("Manual commands are disabled during a scripted shot")
+            raw = json.loads(msg.data)
+            if not isinstance(raw, dict) or raw.keys() != {"slide_m"}:
+                raise ValueError("Expected slide_m")
+            start = self.pose()
+            end = Pose(finite(raw["slide_m"], "slide_m"))
+            end.validate(self.design)
+            self.send(start, end, move_duration(start, end, self.design))
+        except (TypeError, ValueError) as exc:
+            self.get_logger().warning(f"Manual command not sent: {exc}")
+
+    def intercept(self, data, elapsed):
+        if data.get("frame_id", "goal_frame") != "goal_frame":
+            raise ValueError("Prediction must be in goal_frame")
+        start = self.pose()
+        # Offline timing and absolute simulation timing are kept separate.
+        arrival = finite(data["arrival_time_s"], "arrival_time_s")
+        kickoff = finite(data.get("kick_time_s", self.now()), "kick_time_s")
+        target = CrossingTarget(data["y_m"], data["z_m"], arrival - kickoff, elapsed)
+        lead = self.design.simulation["trajectory_lead_s"]
+        start_wall, start_sim = monotonic(), self.now()
+        result = plan(target, self.design, start, extra_delay_s=lead)
+        if result["reachable"]:
+            cmd = result["command"]
+            end = Pose(cmd["slide_m"])
+            dispatch_estimate = max(self.now(), start_sim + monotonic() - start_wall)
+            reserve = self.design.timing["settling_margin_s"] + self.design.timing["front_contact_reserve_s"]
+            if dispatch_estimate + lead + cmd["motion_duration_s"] + reserve > arrival:
+                return {"reachable": False, "reason": "DEADLINE_EXPIRED_DURING_PLANNING", "command": None}
+            self.send(start, end, cmd["motion_duration_s"])
+        return result
+
+    def on_prediction(self, msg):
+        try:
+            if self.shot:
+                raise ValueError("Scripted shot owns the planner for this trial")
+            data = json.loads(msg.data)
+            if not isinstance(data, dict):
+                raise ValueError("Expected a prediction object")
+            data["kick_time_s"] = self.now()
+            result = self.intercept(data, 0.0)
+            self.get_logger().info(f"External prediction: {result['reason']}")
+        except (ValueError, TypeError, KeyError) as exc:
+            self.get_logger().warning(f"Prediction not executed: {exc}")
+
+    def on_shot(self, msg):
+        try:
+            raw = json.loads(msg.data)
+            kick = finite(raw["kick_time_s"], "kick_time_s")
+            arrival = finite(raw["arrival_time_s"], "arrival_time_s")
+            if kick > self.now() + 0.05 or arrival <= kick or self.shot:
+                raise ValueError("Invalid or overlapping shot")
+            self.shot = {"data": raw, "plan": None, "ball_moved": False}
+        except (ValueError, TypeError, KeyError) as exc:
+            self.get_logger().warning(f"Ignored shot event: {exc}")
+
+    def on_ball(self, msg):
+        p = msg.pose.position
+        stamp = msg.header.stamp.sec + msg.header.stamp.nanosec / 1e9
+        previous = self.previous_ball
+        current = (stamp, (p.x, p.y, p.z))
+        self.previous_ball = current
+        if not self.shot:
+            return
+        kick = self.shot["data"]["kick_time_s"]
+        if stamp >= kick and p.x > self.design.geometry["goal_plane_world_x_m"] - self.design.geometry["penalty_distance_m"] + 0.10:
+            self.shot["ball_moved"] = True
+        if previous and kick <= previous[0] < stamp and stamp - previous[0] <= 0.10:
+            scored = goal_crossing(previous[1], current[1], self.design)
+            if scored is not None:
+                self.finish("goal", scored)
+
+    def finish(self, outcome, crossing=None):
+        shot, self.shot = self.shot, None
+        data = shot["data"]
+        planner = shot["plan"] or {"reachable": None, "reason": "NOT_PLANNED"}
+        positions = None
+        if self.joints and self.now() - self.joints[0] <= 0.10:
+            msg = self.joints[1]
+            positions = dict(zip(msg.name, msg.position))
+        result = {"case": data.get("case"), "shot_id": data.get("shot_id"),
+                  "planner_reachable": planner["reachable"], "planner_reason": planner["reason"],
+                  "command": planner.get("command"), "observed_goal_outcome": outcome,
+                  "whole_ball_crossing_world_m": crossing, "measured_joints_at_result": positions}
+        payload = json.dumps(result)
+        self.results.publish(String(data=payload))
+        self.get_logger().info(payload)
+
+    def tick(self):
+        now = self.now()
+        try:
+            q = self.pose()
+            standby = abs(q.slide_m) < 0.02
+        except ValueError:
+            standby = False
+        self.ready.publish(Bool(data=standby and not self.shot and self.writer.get_subscription_count() > 0))
+        if not self.shot:
+            return
+        data = self.shot["data"]
+        elapsed = now - data["kick_time_s"]
+        if self.shot["plan"] is None and elapsed >= self.design.timing["processing_and_communication_s"]:
+            try:
+                self.shot["plan"] = self.intercept(data, elapsed)
+            except (ValueError, TypeError, KeyError) as exc:
+                self.shot["plan"] = {"reachable": None, "reason": str(exc), "command": None}
+        if now >= data["arrival_time_s"] + 0.75:
+            fresh = self.previous_ball and abs(now - self.previous_ball[0]) <= 0.10
+            self.finish("no_goal_observed" if fresh and self.shot["ball_moved"] else "indeterminate")
+
+
+def main():
+    rclpy.init()
+    node = KeeperSim()
+    try:
+        rclpy.spin(node)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        node.destroy_node()
+        if rclpy.ok():
+            rclpy.shutdown()
+
+
+if __name__ == "__main__":
+    main()

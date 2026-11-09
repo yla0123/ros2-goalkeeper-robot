@@ -1,9 +1,7 @@
 # Goalkeeper Description
 
-Status: an ament_cmake description package with a generated human-shaped URDF. A joint execution controller is not implemented.
+The generated [URDF](urdf/goalkeeper.urdf) and [closed diamond mesh](meshes/diamond_panel.stl) share [keeper.design.json](../../config/keeper.design.json). The whole assembly has one lateral `slide_joint`. The solid diamond is 1.45 m × 0.90 m across its diagonals, with its upper tip 2.15 m above the pitch.
 
-The model has slide_joint translating along +Y and tilt_joint rotating about +X. Eleven boxes represent the head, neck, torso, arms, gloves, legs, and feet. Their collision dimensions match the planner's occupied footprint in config/keeper.design.json.
+Regenerate via `python3 tools/generate_geometry.py` and rebuild. The mesh is installed in the description package; the launch supplies its parent share path for [Gazebo package URI resolution](https://github.com/gazebosim/ros_gz/blob/jazzy/ros_gz_sim/README.md). See [dimensions and validation](../../docs/robot-design.md).
 
-The nominal body is 1.90 m tall with a 1.90 m arm span. It uses a 1.00 m hip-like pivot, 0.05 m upright foot clearance, and approximate 85 kg simulation inertia. These are modelling choices, not FIFA requirements or human biomechanics. Run python3 tools/generate_geometry.py from the repository root after changing the configuration.
-
-See the [architecture](../../docs/architecture.md) and [coordinate conventions](../../docs/interfaces.md).
+The goalkeeper portrait is mapped across both plate fronts with a visual-only [OBJ decal](meshes/keeper-front-decal.obj) and [print texture](meshes/keeper-front-print.png). The collision surfaces remain the original shapes. The mesh uses [OBJ and MTL texture mapping supported by Gazebo](https://gazebosim.org/api/sim/8/migrationsdf.html); its appearance in the live simulator remains to be checked.

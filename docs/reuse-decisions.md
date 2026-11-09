@@ -6,8 +6,8 @@ Repository inspection date: October 10, 2026. These decisions are based on sourc
 
 | Component | Choice | Reason | Work still required |
 | --- | --- | --- | --- |
-| Gazebo integration | [gz_ros2_control](https://control.ros.org/jazzy/doc/gz_ros2_control/doc/index.html) | Official ROS 2 Jazzy and Gazebo Harmonic integration | Two-axis model, controller configuration, and realistic motion limits |
-| Simulated joint motion | [joint_trajectory_controller](https://control.ros.org/jazzy/doc/ros2_controllers/joint_trajectory_controller/doc/userdoc.html) | Standard joint trajectory interface | Configure joint and state interfaces, adapters, and target timing |
+| Gazebo integration | [ros_gz_bridge for Jazzy](https://github.com/gazebosim/ros_gz/blob/jazzy/ros_gz_bridge/README.md) | Bridges joint commands, state, and ball pose | Validate startup and feedback on Ubuntu |
+| Simulated joint motion | [Gazebo Harmonic joint trajectory controller](https://gazebosim.org/api/sim/8/jointcontrollers.html) | Executes a lateral trajectory on the fixed-panel keeper | Measure and tune tracking in the simulator |
 
 Pin tested simulation-library versions. Existing library examples show individual capabilities; they do not prove the complete interception pipeline meets its timing budget.
 
@@ -28,4 +28,4 @@ The [RobotKeeper product page](https://www.robokeeper.cn/cn/products/football/) 
 
 ## 4. Project-specific work
 
-The team must implement the carriage-plus-tilt geometry, target-to-pose planner, ROS 2 interfaces, execution adapters, timeout and stop behavior, coordinate calibration, and experimental evaluation. These are the project's integration tasks and must be reported separately from the capabilities of reused libraries.
+The team still needs to validate tracking, timing and experimental outcomes, then connect calibrated camera prediction. The scripted shooter is a source of test targets, not a substitute for camera validation.

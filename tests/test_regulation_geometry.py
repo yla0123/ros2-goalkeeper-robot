@@ -1,142 +1,145 @@
-"""Behavior and asset-consistency checks for the regulation-size model."""
+"""Offline checks of generated geometry, fixed-panel motion and scoring."""
+from collections import Counter
 from dataclasses import replace
-import json
-import math
 from pathlib import Path
-import subprocess
 import sys
-import tempfile
 import unittest
 import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src/goalkeeper_control"))
+from goalkeeper_control.model import CrossingTarget, Design, JOINT_NAMES, Pose
+from goalkeeper_control.planner import covers, footprint, motion_samples, move_duration, plan, swept_clearance
+from goalkeeper_control.protocol import goal_crossing, state_pose
 
-from goalkeeper_control.model import CrossingTarget, Design, RobotState
-from goalkeeper_control.planner import covers, keeper_corners, plan, swept_clearance, trajectory
-from goalkeeper_control.protocol import decode_move, encode_plan
 
-
-class RegulationGeometryTests(unittest.TestCase):
+class DiamondKeeperTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.design = Design.load(ROOT / "config/keeper.design.json")
+        cls.d = Design.load(ROOT / "config/keeper.design.json")
         cls.world = ET.parse(ROOT / "src/goalkeeper_sim/worlds/goalkeeper_world.sdf").getroot().find("world")
         cls.robot = ET.parse(ROOT / "src/goalkeeper_description/urdf/goalkeeper.urdf").getroot()
+        cls.mesh = ROOT / "src/goalkeeper_description/meshes/diamond_panel.stl"
 
-    def test_clear_goal_aperture_uses_inside_edges(self):
+    def test_goal_visual_and_collision_dimensions(self):
         goal = self.world.find("model[@name='goal']")
-        left = goal.find("link[@name='left_post']")
-        right = goal.find("link[@name='right_post']")
-        radius = float(left.find("collision/geometry/cylinder/radius").text)
-        y_left = float(left.find("pose").text.split()[1])
-        y_right = float(right.find("pose").text.split()[1])
-        self.assertAlmostEqual(y_left - y_right - 2 * radius, 7.32)
-        bar = goal.find("link[@name='crossbar']")
-        underside = float(bar.find("pose").text.split()[2]) - float(bar.find("collision/geometry/cylinder/radius").text)
-        self.assertAlmostEqual(underside, 2.44)
-        goal_x = float(goal.find("pose").text.split()[0])
-        self.assertAlmostEqual(goal_x + radius, self.design.goal_plane_world_x_m)
+        left, right, bar = (goal.find(f"link[@name='{name}']") for name in ("left_post", "right_post", "crossbar"))
+        yl, yr = (float(p.findtext("pose").split()[1]) for p in (left, right))
+        self.assertEqual((yl, yr), (3.72, -3.72))
+        for mode in ("visual", "collision"):
+            radii = [float(node.findtext(f"{mode}/geometry/cylinder/radius")) for node in (left, right, bar)]
+            self.assertEqual(radii, [0.06]*3)
+            self.assertAlmostEqual(yl - yr - sum(radii[:2]), 7.32)
+            self.assertAlmostEqual(yl - yr + sum(radii[:2]), 7.56)
+            z = float(bar.findtext("pose").split()[2])
+            self.assertAlmostEqual(z - radii[2], 2.44)
+            self.assertAlmostEqual(z + radii[2], 2.56)
 
-    def test_penalty_mark_and_initial_ball_are_eleven_meters_away(self):
-        spot = self.world.find("model[@name='field_marking']/link/visual[@name='penalty_spot']/pose")
-        spot_x = float(spot.text.split()[0])
-        self.assertAlmostEqual(self.design.goal_plane_world_x_m - spot_x, 11.0)
-        ball = self.world.find("include[name='soccer_ball']/pose")
-        self.assertAlmostEqual(float(ball.text.split()[0]), spot_x)
+    def test_penalty_distance(self):
+        frame = self.world.find("model[@name='goal']")
+        x = float(frame.findtext("pose").split()[0]) + self.d.geometry["post_radius_m"]
+        spot = self.world.findtext("model[@name='field_marking']/link/visual[@name='penalty_spot']/pose")
+        self.assertAlmostEqual(x - float(spot.split()[0]), 11.0)
 
-    def test_robot_and_planner_share_each_blocking_part(self):
-        body = self.robot.find("link[@name='keeper_body']")
-        collisions = {node.attrib["name"]: node for node in body.findall("collision")}
-        self.assertEqual(set(collisions), {part.name for part in self.design.footprint})
-        for part in self.design.footprint:
-            xyz = list(map(float, collisions[part.name].find("origin").attrib["xyz"].split()))
-            dimensions = list(map(float, collisions[part.name].find("geometry/box").attrib["size"].split()))
-            self.assertEqual(xyz, [0.0, part.center_y_m, part.center_z_m])
-            self.assertEqual(dimensions, [self.design.keeper_depth_m, part.width_m, part.height_m])
+    def test_panels_and_chassis_exact_front_dimensions(self):
+        parts = dict(footprint(self.d.neutral, self.d))
+        diamond = parts["diamond_panel"]
+        self.assertEqual(len(diamond), 4)
+        for actual, expected in zip(diamond, ((0, 1.25), (0.725, 1.70), (0, 2.15), (-0.725, 1.70))):
+            self.assertAlmostEqual(actual[0], expected[0])
+            self.assertAlmostEqual(actual[1], expected[1])
+        rect = parts["rectangle_panel"]
+        self.assertAlmostEqual(max(y for y, _ in rect) - min(y for y, _ in rect), 0.50)
+        self.assertAlmostEqual(min(z for _, z in rect), 0.22)
+        self.assertAlmostEqual(max(z for _, z in rect), 1.35)
+        base = next(p for p in self.d.fixed_parts() if p.name == "chassis")
+        self.assertEqual((base.width_m, base.depth_m), (0.85, 0.75))
+        self.assertAlmostEqual(max(z for _, z in parts["chassis"]), 0.22)
+        self.assertAlmostEqual(min(z for _, z in parts["front_left_wheel"]), 0)
 
-    def test_original_slide_and_tilt_axes_are_preserved(self):
-        slide = self.robot.find("joint[@name='slide_joint']")
-        tilt = self.robot.find("joint[@name='tilt_joint']")
-        self.assertEqual(slide.attrib["type"], "prismatic")
-        self.assertEqual(slide.find("axis").attrib["xyz"], "0 1 0")
-        self.assertEqual(tilt.attrib["type"], "revolute")
-        self.assertEqual(tilt.find("axis").attrib["xyz"], "1 0 0")
-        self.assertIsNone(self.robot.find("joint[@name='vertical_joint']"))
-        for node, axis in ((slide, self.design.slide), (tilt, self.design.tilt)):
-            self.assertAlmostEqual(float(node.find("limit").attrib["lower"]), axis.minimum)
-            self.assertAlmostEqual(float(node.find("limit").attrib["upper"]), axis.maximum)
+    def test_same_mesh_for_visual_and_collision_and_matching_planner_projection(self):
+        link = self.robot.find("link[@name='keeper_chassis']")
+        mesh_names = [link.find(f"{kind}[@name='diamond_panel']/geometry/mesh").get("filename")
+                      for kind in ("visual", "collision")]
+        self.assertEqual(mesh_names, ["package://goalkeeper_description/meshes/diamond_panel.stl"]*2)
+        points = [tuple(map(float, line.strip().split()[1:]))
+                  for line in self.mesh.read_text().splitlines() if line.strip().startswith("vertex ")]
+        origin = tuple(map(float, link.find("collision[@name='diamond_panel']/origin").get("xyz").split()))
+        projected = {(round(y + origin[1], 6), round(z + origin[2], 6)) for _, y, z in points}
+        expected = {(round(y, 6), round(z, 6)) for y, z in dict(footprint(self.d.neutral, self.d))["diamond_panel"]}
+        self.assertEqual(projected, expected)
+        self.assertAlmostEqual(max(p[0] for p in points) - min(p[0] for p in points), 0.04)
 
-    def test_height_and_arm_span_are_adult_scale(self):
-        corners = keeper_corners(0, 0, self.design)
-        self.assertAlmostEqual(max(p[0] for p in corners) - min(p[0] for p in corners), 1.90)
-        self.assertAlmostEqual(max(p[1] for p in corners) - min(p[1] for p in corners), 1.90)
-        self.assertAlmostEqual(min(p[1] for p in corners), 0.05)
-        self.assertAlmostEqual(max(p[1] for p in corners), 1.95)
+    def test_diamond_mesh_is_closed_and_outward(self):
+        vertices = [tuple(map(float, line.strip().split()[1:]))
+                    for line in self.mesh.read_text().splitlines() if line.strip().startswith("vertex ")]
+        faces = list(zip(vertices[0::3], vertices[1::3], vertices[2::3]))
+        self.assertEqual(len(faces), 12)
+        edges = Counter(tuple(sorted((a, b))) for face in faces for a, b in zip(face, face[1:] + face[:1]))
+        self.assertTrue(all(n == 2 for n in edges.values()))
+        volume = sum(a[0]*(b[1]*c[2]-b[2]*c[1]) + a[1]*(b[2]*c[0]-b[0]*c[2]) +
+                     a[2]*(b[0]*c[1]-b[1]*c[0]) for a, b, c in faces) / 6
+        self.assertAlmostEqual(volume, 1.45 * 0.90 * 0.04 / 2)
 
-    def test_empty_space_between_head_and_glove_is_not_solid(self):
-        self.assertFalse(covers(CrossingTarget(0.55, 1.80), 0, 0, self.design))
-        self.assertTrue(covers(CrossingTarget(0.875, 1.43), 0, 0, self.design))
+    def test_panel_area_is_solid_but_bounding_box_corners_are_empty(self):
+        for y, z in ((0, 1.75), (0.55, 1.70), (0, 2.10)):
+            self.assertTrue(covers(CrossingTarget(y, z, 0.55, 0.10), self.d.neutral, self.d))
+        for y, z in ((0.68, 2.08), (-0.68, 2.08), (0.55, 1.30)):
+            self.assertFalse(covers(CrossingTarget(y, z, 0.55, 0.10), self.d.neutral, self.d))
 
-    def test_full_size_goal_does_not_reject_valid_wide_shot_as_outside(self):
-        result = plan(CrossingTarget(3.2, 1.2), self.design)
-        self.assertNotEqual(result["reason"], "TARGET_OUTSIDE_GOAL")
-        self.assertFalse(result["reachable"])
-        self.assertIsNone(result["command"])
+    def test_one_controlled_joint_and_mobile_mass(self):
+        joints = [j for j in self.robot.findall("joint") if j.get("type") != "fixed"]
+        self.assertEqual(tuple(j.get("name") for j in joints), JOINT_NAMES)
+        self.assertEqual(joints[0].get("type"), "prismatic")
+        self.assertEqual(joints[0].find("axis").get("xyz"), "0 1 0")
+        plugin = self.robot.find("gazebo/plugin[@name='gz::sim::systems::JointTrajectoryController']")
+        self.assertEqual([j.text for j in plugin.findall("joint_name")], ["slide_joint"])
+        mass = self.robot.find("link[@name='keeper_chassis']/inertial/mass")
+        self.assertEqual(float(mass.get("value")), 85.0)
+        self.assertEqual(85 * self.d.slide.max_acceleration, 340.0)
 
-    def test_outside_goal_is_rejected(self):
-        for y, z in ((3.67, 1.0), (0.0, 2.45), (0.0, -0.01)):
-            self.assertEqual(plan(CrossingTarget(y, z), self.design)["reason"], "TARGET_OUTSIDE_GOAL")
+    def test_slide_both_ways_within_speed_acceleration_and_frame_limits(self):
+        start = self.d.neutral
+        for displacement in (-2.65, 2.65):
+            end = Pose(displacement)
+            self.assertTrue(swept_clearance(start, end, self.d))
+            samples = list(motion_samples(start, end, move_duration(start, end, self.d), self.d))
+            self.assertEqual(samples[0][1][0][0], 0.0)
+            self.assertEqual(samples[-1][1][0][0], displacement)
+            self.assertTrue(all(abs(states[0][1]) <= self.d.slide.max_speed + 1e-8 and
+                                abs(states[0][2]) <= self.d.slide.max_acceleration + 1e-8 for _, states in samples))
+        self.assertFalse(swept_clearance(start, Pose(3.1), self.d))
 
-    def test_center_hold_can_be_encoded_without_zero_duration_failure(self):
-        result = plan(CrossingTarget(0.0, 1.3), self.design)
-        self.assertTrue(result["reachable"])
-        self.assertAlmostEqual(result["command"]["slide_m"], 0.0)
-        self.assertAlmostEqual(result["command"]["tilt_rad"], 0.0)
-        self.assertGreater(decode_move(encode_plan(result, self.design), self.design).motion_ms, 0)
+    def test_crossbar_and_floor_block_unsafe_geometry(self):
+        short = replace(self.d, geometry={**self.d.geometry, "goal_height_m": 2.12})
+        self.assertFalse(swept_clearance(short.neutral, short.neutral, short))
+        bad = replace(self.d, keeper={**self.d.keeper, "rectangle": {**self.d.keeper["rectangle"], "bottom_m": -0.01}})
+        self.assertFalse(swept_clearance(bad.neutral, bad.neutral, bad))
 
-    def test_demo_respects_deadline_clearance_and_motion_limits(self):
-        result = plan(CrossingTarget(1.3, 1.4), self.design)
-        self.assertTrue(result["reachable"])
-        command = result["command"]
-        self.assertLessEqual(command["motion_finishes_at_s"] + self.design.settling_margin_s, 0.55 + 1e-9)
-        self.assertTrue(covers(CrossingTarget(1.3, 1.4), command["slide_m"], command["tilt_rad"], self.design))
-        rows = trajectory(result, self.design)
-        for row in rows:
-            self.assertLessEqual(abs(row["slide_velocity_mps"]), self.design.slide.max_speed + 1e-9)
-            self.assertLessEqual(abs(row["tilt_velocity_radps"]), self.design.tilt.max_speed + 1e-9)
-            self.assertLessEqual(abs(row["slide_acceleration_mps2"]), self.design.slide.max_acceleration + 1e-9)
-            self.assertLessEqual(abs(row["tilt_acceleration_radps2"]), self.design.tilt.max_acceleration + 1e-9)
-            for y, z in keeper_corners(row["slide_m"], row["tilt_rad"], self.design):
-                self.assertLessEqual(abs(y), self.design.goal_width_m / 2 - self.design.frame_clearance_m + 1e-9)
-                self.assertGreaterEqual(z, self.design.frame_clearance_m - 1e-9)
-                self.assertLessEqual(z, self.design.goal_height_m - self.design.frame_clearance_m + 1e-9)
-        self.assertAlmostEqual(rows[-1]["slide_m"], command["slide_m"])
-        self.assertAlmostEqual(rows[-1]["tilt_rad"], command["tilt_rad"])
-        self.assertAlmostEqual(rows[-1]["time_s"], 0.55)
+    def test_cases_and_front_contact_budget(self):
+        for case, expected in (("center", True), ("low", True), ("high_corner", False)):
+            target = CrossingTarget(**self.d.scenarios[case], arrival_time_s=0.55, elapsed_since_kick_s=0.10)
+            result = plan(target, self.d)
+            self.assertAlmostEqual(result["motion_budget_s"], 0.405)
+            self.assertEqual(result["reachable"], expected)
+            if expected:
+                command = result["command"]
+                self.assertTrue(covers(target, Pose(command["slide_m"]), self.d))
+                self.assertLessEqual(command["motion_duration_s"], result["motion_budget_s"])
+            else:
+                self.assertEqual(result["reason"], "ABOVE_PANEL_COVERAGE")
+                self.assertIsNone(result["command"])
 
-    def test_stale_prediction_produces_no_move(self):
-        result = plan(CrossingTarget(1.3, 1.4, elapsed_since_kick_s=0.56), self.design)
-        self.assertFalse(result["reachable"])
-        self.assertIsNone(result["command"])
+    def test_whole_ball_goal_is_separate_from_planner(self):
+        for end in ((10.10, 0, 1), (10.20, 3.57, 1), (10.20, 0, 2.35), (10.20, 0, 0.107)):
+            start = (10.05, end[1], end[2])
+            self.assertIsNone(goal_crossing(start, end, self.d))
+        self.assertIsNotNone(goal_crossing((10.05, 0, 0.109), (10.20, 0, 0.109), self.d))
 
-    def test_footprint_dimensions_must_agree_with_declared_height(self):
-        with self.assertRaises(ValueError):
-            replace(self.design, keeper_height_m=0.65).validate()
-
-    def test_tilted_body_must_clear_the_frame(self):
-        self.assertTrue(swept_clearance(RobotState(), 0, -math.pi / 4, self.design))
-        self.assertFalse(swept_clearance(RobotState(), 3.2, 0, self.design))
-
-    def test_cli_demo_and_csv_work_without_an_examples_directory(self):
-        with tempfile.TemporaryDirectory() as folder:
-            destination = Path(folder) / "path.csv"
-            process = subprocess.run([sys.executable, str(ROOT / "run_keeper.py"), "demo", "--path-csv", str(destination)],
-                                     capture_output=True, text=True, check=True)
-            output = json.loads(process.stdout)
-            self.assertTrue(output["plan"]["reachable"])
-            self.assertEqual(output["coordinate_input"]["crossing_y_m"], 1.3)
-            self.assertGreater(len(destination.read_text().splitlines()), 10)
+    def test_controller_rejects_missing_or_moving_slide_feedback(self):
+        self.assertIsNone(state_pose((), (), (), JOINT_NAMES, (self.d.slide,), (0.02,)))
+        self.assertIsNone(state_pose(JOINT_NAMES, [0], [0.2], JOINT_NAMES, (self.d.slide,), (0.02,)))
+        self.assertEqual(state_pose(JOINT_NAMES, [0.08], [0], JOINT_NAMES, (self.d.slide,), (0.02,)), [0.08])
 
 
 if __name__ == "__main__":

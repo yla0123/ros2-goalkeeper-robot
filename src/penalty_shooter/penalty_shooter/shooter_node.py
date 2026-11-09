@@ -7,6 +7,9 @@ from pathlib import Path
 from ros_gz_interfaces.msg import EntityWrench
 from ros_gz_interfaces.msg import Entity
 from ros_gz_interfaces.srv import DeleteEntity, SpawnEntity
+from geometry_msgs.msg import PoseStamped
+from rclpy.qos import qos_profile_sensor_data
+from std_msgs.msg import Bool, String
 
 # import math
 import random
@@ -18,6 +21,12 @@ class PenaltyShooter(Node):
         super().__init__('penalty_shooter')
 
         self.publisher = self.create_publisher(EntityWrench, '/world/goalkeeper_world/wrench', 10)
+        self.shot_publisher = self.create_publisher(String, '/keeper/shot', 10)
+        self._keeper_ready = False
+        self._ball_pose = None
+        self._shot_id = 0
+        self.create_subscription(Bool, '/keeper/ready', self._on_ready, 10)
+        self.create_subscription(PoseStamped, '/model/soccer_ball/pose', self._on_ball, qos_profile_sensor_data)
 
         self._delete_client = self.create_client(DeleteEntity, 'world/goalkeeper_world/remove')
 
@@ -28,9 +37,6 @@ class PenaltyShooter(Node):
         design = json.loads((sim_share / 'config' / 'keeper.design.json').read_text(encoding='utf-8'))
         geometry = design['geometry']
 
-        # start the shot after 1 sec
-        self._kick_timer = self.create_timer(1.0, self._kick_after_reset) 
-
         # Initial position
         self._goal_x = geometry['goal_plane_world_x_m']
         self._goal_width = geometry['goal_width_m']
@@ -40,15 +46,32 @@ class PenaltyShooter(Node):
         self._ball_z = geometry['ball_radius_m']
         self._flight_time = design['timing']['flight_time_s']
 
-        self._ball_mass = 0.43
+        self._ball_mass = design['simulation']['ball_mass_kg']
+        self._step = design['simulation']['physics_step_s']
+        self._cases = design['scenarios']
+        self._case = self.declare_parameter('shot_case', 'random').value
+        self._single_shot = self.declare_parameter('single_shot', False).value
+        self._require_keeper_ready = self.declare_parameter('require_keeper_ready', False).value
+        if self._case != 'random' and self._case not in self._cases:
+            raise ValueError(f'Unknown shot case: {self._case}')
+        self._kick_timer = self.create_timer(1.0, self._kick_after_reset)
+
+    def _on_ready(self, msg):
+        self._keeper_ready = msg.data
+
+    def _on_ball(self, msg):
+        self._ball_pose = msg.pose.position
 
     def kick_ball(self):
 
-        dt = 0.001
+        dt = self._step
 
         # randomly generate shots
         target_x, target_y, target_z, flight_time = self.generate_shot()
         vx, vy, vz = self.get_launch_velocity(target_x, target_y, target_z, flight_time)
+        if self._case == 'low':
+            # This preset rolls along the pitch; it does not lob and land at the line.
+            vz = 0.0
 
         # Kick strength
         force_x = self._ball_mass * vx / dt
@@ -57,8 +80,8 @@ class PenaltyShooter(Node):
 
         msg = EntityWrench()
 
-        msg.entity.name = 'soccer_ball::ball_link'
-        msg.entity.type = Entity.LINK
+        msg.entity.name = 'soccer_ball'
+        msg.entity.type = Entity.MODEL
 
         msg.wrench.force.x = force_x
         msg.wrench.force.y = force_y
@@ -68,6 +91,13 @@ class PenaltyShooter(Node):
         msg.wrench.torque.y = 0.0
         msg.wrench.torque.z = 0.0
 
+        kickoff = self.get_clock().now().nanoseconds / 1e9
+        self._shot_id += 1
+        self.shot_publisher.publish(String(data=json.dumps({
+            'shot_id': self._shot_id, 'case': self._case, 'frame_id': 'goal_frame',
+            'kick_time_s': kickoff, 'arrival_time_s': kickoff + flight_time,
+            'y_m': target_y, 'z_m': target_z,
+        })))
         self.publisher.publish(msg)
 
         # self.get_logger().info(
@@ -80,7 +110,8 @@ class PenaltyShooter(Node):
 
         self.get_logger().info('Ball kicked!')
 
-        self._reset_timer = self.create_timer(2.0, self._reset_after_shot)
+        if not self._single_shot:
+            self._reset_timer = self.create_timer(2.0, self._reset_after_shot)
 
     # ============= Delete and Respawn the ball =============
     def reset_ball(self):
@@ -156,7 +187,14 @@ class PenaltyShooter(Node):
         self.reset_ball()
 
     def _kick_after_reset(self):
-        # this function is called at the end of reset_ball()
+        # Do not issue the first kick before Gazebo and the bridge are connected.
+        if self._require_keeper_ready and not self._keeper_ready:
+            return
+        p = self._ball_pose
+        if (not self.publisher.get_subscription_count() or p is None or
+                abs(p.x - self._ball_x) > 0.05 or abs(p.y) > 0.05 or
+                abs(p.z - self._ball_z) > 0.05):
+            return
         self._kick_timer.cancel()
         self.kick_ball()
 
@@ -176,6 +214,9 @@ class PenaltyShooter(Node):
     
     def generate_shot(self):
         target_x = self._goal_x
+        if self._case != 'random':
+            shot = self._cases[self._case]
+            return target_x, shot['y_m'], shot['z_m'], self._flight_time
         margin = self._ball_z + 0.05
         target_y = random.uniform(-self._goal_width / 2 + margin, self._goal_width / 2 - margin)
         target_z = random.uniform(margin, self._goal_height - margin)

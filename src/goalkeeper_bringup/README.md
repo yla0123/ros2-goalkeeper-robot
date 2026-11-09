@@ -1,9 +1,5 @@
 # Goalkeeper Bringup
 
-Status: proposed module; launch files and ROS 2 package files are not implemented.
+The active simulation entry point is `ros2 launch goalkeeper_sim simulation.launch.py`. It loads the generated URDF/world, bridges the native Gazebo controller and feedback, and starts the checked command adapter. Optional `shoot:=true shot_case:=low` starts one scripted shot after measured standby.
 
-Provide manual_sim and autonomous_sim launch modes. Each mode must select one command source and the simulation backend, load consistent configuration, and start disarmed. Keep backend selection separate so a later external controller adapter can use the same target contract.
-
-Changing a mode must stop and disarm before handing over control. The [example configuration](../../config/keeper.example.yaml) supplies simulation and planning settings.
-
-See the [implementation plan](../../docs/implementation-plan.md).
+See the [runtime steps](../../docs/robot-design.md#run-and-check) and [active interfaces](../../docs/interfaces.md). A separate hardware launch is not implemented.

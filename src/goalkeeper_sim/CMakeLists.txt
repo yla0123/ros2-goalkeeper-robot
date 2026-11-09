@@ -7,6 +7,11 @@ endif()
 
 # find dependencies
 find_package(ament_cmake REQUIRED)
+find_package(ament_cmake_python REQUIRED)
+ament_python_install_package(goalkeeper_control
+  PACKAGE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../goalkeeper_control/goalkeeper_control"
+)
+install(PROGRAMS scripts/keeper_sim_node DESTINATION lib/${PROJECT_NAME})
 # uncomment the following section in order to fill in
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
