@@ -5,203 +5,158 @@
   <link name="base_link">
     <inertial>
       <mass value="0.001" />
-      <inertia ixx="0.000001" iyy="0.000001" izz="0.000001" ixy="0" ixz="0" iyz="0" />
-    </inertial>
-  </link>
-  <link name="slider_carriage">
-    <inertial>
-      <mass value="0.001" />
-      <inertia ixx="0.000001" iyy="0.000001" izz="0.000001" ixy="0" ixz="0" iyz="0" />
+      <inertia ixx="1e-06" iyy="1e-06" izz="1e-06" ixy="0" ixz="0" iyz="0" />
     </inertial>
   </link>
   <joint name="world_to_base" type="fixed">
     <parent link="world" />
     <child link="base_link" />
+    <origin xyz="0 0 0" rpy="0 0 0" />
   </joint>
-  <link name="keeper_body">
-    <visual name="torso">
-      <origin xyz="0 0 0.285" rpy="0 0 0" />
-      <geometry>
-        <box size="0.24 0.5 0.61" />
-      </geometry>
-      <material name="torso_material">
-        <color rgba="0.08 0.65 0.34 1" />
-      </material>
-    </visual>
-    <collision name="torso">
-      <origin xyz="0 0 0.285" rpy="0 0 0" />
-      <geometry>
-        <box size="0.24 0.5 0.61" />
-      </geometry>
-    </collision>
-    <visual name="neck">
-      <origin xyz="0 0 0.64" rpy="0 0 0" />
-      <geometry>
-        <box size="0.24 0.12 0.1" />
-      </geometry>
-      <material name="neck_material">
-        <color rgba="0.82 0.61 0.43 1" />
-      </material>
-    </visual>
-    <collision name="neck">
-      <origin xyz="0 0 0.64" rpy="0 0 0" />
-      <geometry>
-        <box size="0.24 0.12 0.1" />
-      </geometry>
-    </collision>
-    <visual name="head">
-      <origin xyz="0 0 0.82" rpy="0 0 0" />
-      <geometry>
-        <box size="0.24 0.24 0.26" />
-      </geometry>
-      <material name="head_material">
-        <color rgba="0.82 0.61 0.43 1" />
-      </material>
-    </visual>
-    <collision name="head">
-      <origin xyz="0 0 0.82" rpy="0 0 0" />
-      <geometry>
-        <box size="0.24 0.24 0.26" />
-      </geometry>
-    </collision>
-    <visual name="left_arm">
-      <origin xyz="0 0.55 0.43" rpy="0 0 0" />
-      <geometry>
-        <box size="0.24 0.6 0.18" />
-      </geometry>
-      <material name="left_arm_material">
-        <color rgba="0.08 0.65 0.34 1" />
-      </material>
-    </visual>
-    <collision name="left_arm">
-      <origin xyz="0 0.55 0.43" rpy="0 0 0" />
-      <geometry>
-        <box size="0.24 0.6 0.18" />
-      </geometry>
-    </collision>
-    <visual name="right_arm">
-      <origin xyz="0 -0.55 0.43" rpy="0 0 0" />
-      <geometry>
-        <box size="0.24 0.6 0.18" />
-      </geometry>
-      <material name="right_arm_material">
-        <color rgba="0.08 0.65 0.34 1" />
-      </material>
-    </visual>
-    <collision name="right_arm">
-      <origin xyz="0 -0.55 0.43" rpy="0 0 0" />
-      <geometry>
-        <box size="0.24 0.6 0.18" />
-      </geometry>
-    </collision>
-    <visual name="left_glove">
-      <origin xyz="0 0.875 0.43" rpy="0 0 0" />
-      <geometry>
-        <box size="0.24 0.15 0.22" />
-      </geometry>
-      <material name="left_glove_material">
-        <color rgba="0.95 0.95 0.95 1" />
-      </material>
-    </visual>
-    <collision name="left_glove">
-      <origin xyz="0 0.875 0.43" rpy="0 0 0" />
-      <geometry>
-        <box size="0.24 0.15 0.22" />
-      </geometry>
-    </collision>
-    <visual name="right_glove">
-      <origin xyz="0 -0.875 0.43" rpy="0 0 0" />
-      <geometry>
-        <box size="0.24 0.15 0.22" />
-      </geometry>
-      <material name="right_glove_material">
-        <color rgba="0.95 0.95 0.95 1" />
-      </material>
-    </visual>
-    <collision name="right_glove">
-      <origin xyz="0 -0.875 0.43" rpy="0 0 0" />
-      <geometry>
-        <box size="0.24 0.15 0.22" />
-      </geometry>
-    </collision>
-    <visual name="left_leg">
-      <origin xyz="0 0.14 -0.475" rpy="0 0 0" />
-      <geometry>
-        <box size="0.24 0.18 0.95" />
-      </geometry>
-      <material name="left_leg_material">
-        <color rgba="0.08 0.13 0.20 1" />
-      </material>
-    </visual>
-    <collision name="left_leg">
-      <origin xyz="0 0.14 -0.475" rpy="0 0 0" />
-      <geometry>
-        <box size="0.24 0.18 0.95" />
-      </geometry>
-    </collision>
-    <visual name="right_leg">
-      <origin xyz="0 -0.14 -0.475" rpy="0 0 0" />
-      <geometry>
-        <box size="0.24 0.18 0.95" />
-      </geometry>
-      <material name="right_leg_material">
-        <color rgba="0.08 0.13 0.20 1" />
-      </material>
-    </visual>
-    <collision name="right_leg">
-      <origin xyz="0 -0.14 -0.475" rpy="0 0 0" />
-      <geometry>
-        <box size="0.24 0.18 0.95" />
-      </geometry>
-    </collision>
-    <visual name="left_foot">
-      <origin xyz="0 0.14 -0.89" rpy="0 0 0" />
-      <geometry>
-        <box size="0.24 0.22 0.12" />
-      </geometry>
-      <material name="left_foot_material">
-        <color rgba="0.08 0.13 0.20 1" />
-      </material>
-    </visual>
-    <collision name="left_foot">
-      <origin xyz="0 0.14 -0.89" rpy="0 0 0" />
-      <geometry>
-        <box size="0.24 0.22 0.12" />
-      </geometry>
-    </collision>
-    <visual name="right_foot">
-      <origin xyz="0 -0.14 -0.89" rpy="0 0 0" />
-      <geometry>
-        <box size="0.24 0.22 0.12" />
-      </geometry>
-      <material name="right_foot_material">
-        <color rgba="0.08 0.13 0.20 1" />
-      </material>
-    </visual>
-    <collision name="right_foot">
-      <origin xyz="0 -0.14 -0.89" rpy="0 0 0" />
-      <geometry>
-        <box size="0.24 0.22 0.12" />
-      </geometry>
-    </collision>
+  <link name="keeper_chassis">
     <inertial>
-      <origin xyz="0 0 0.0545266048" rpy="0 0 0" />
+      <origin xyz="-0.008470588235 0 0.6614705882" rpy="0 0 0" />
       <mass value="85" />
-      <inertia ixx="33.3260335" iyy="22.6267718" izz="11.5152617" ixy="0" ixz="0" iyz="0" />
+      <inertia ixx="39.42799951" iyy="36.55425069" izz="7.087567843" ixy="0" ixz="0.7477411765" iyz="0" />
     </inertial>
+    <visual name="chassis">
+      <origin xyz="0.0 0 0.15" rpy="0 0 0" />
+      <geometry>
+        <box size="0.75 0.85 0.14" />
+      </geometry>
+      <material name="chassis_material">
+        <color rgba="0.20 0.35 0.51 1" />
+      </material>
+    </visual>
+    <collision name="chassis">
+      <origin xyz="0.0 0 0.15" rpy="0 0 0" />
+      <geometry>
+        <box size="0.75 0.85 0.14" />
+      </geometry>
+    </collision>
+    <visual name="front_left_wheel">
+      <origin xyz="0.27 0.385 0.075" rpy="1.5707963267948966 0 0" />
+      <geometry>
+        <cylinder radius="0.075" length="0.08" />
+      </geometry>
+      <material name="front_left_wheel_material">
+        <color rgba="0.10 0.14 0.19 1" />
+      </material>
+    </visual>
+    <collision name="front_left_wheel">
+      <origin xyz="0.27 0.385 0.075" rpy="1.5707963267948966 0 0" />
+      <geometry>
+        <cylinder radius="0.075" length="0.08" />
+      </geometry>
+    </collision>
+    <visual name="front_right_wheel">
+      <origin xyz="0.27 -0.385 0.075" rpy="1.5707963267948966 0 0" />
+      <geometry>
+        <cylinder radius="0.075" length="0.08" />
+      </geometry>
+      <material name="front_right_wheel_material">
+        <color rgba="0.10 0.14 0.19 1" />
+      </material>
+    </visual>
+    <collision name="front_right_wheel">
+      <origin xyz="0.27 -0.385 0.075" rpy="1.5707963267948966 0 0" />
+      <geometry>
+        <cylinder radius="0.075" length="0.08" />
+      </geometry>
+    </collision>
+    <visual name="rear_left_wheel">
+      <origin xyz="-0.27 0.385 0.075" rpy="1.5707963267948966 0 0" />
+      <geometry>
+        <cylinder radius="0.075" length="0.08" />
+      </geometry>
+      <material name="rear_left_wheel_material">
+        <color rgba="0.10 0.14 0.19 1" />
+      </material>
+    </visual>
+    <collision name="rear_left_wheel">
+      <origin xyz="-0.27 0.385 0.075" rpy="1.5707963267948966 0 0" />
+      <geometry>
+        <cylinder radius="0.075" length="0.08" />
+      </geometry>
+    </collision>
+    <visual name="rear_right_wheel">
+      <origin xyz="-0.27 -0.385 0.075" rpy="1.5707963267948966 0 0" />
+      <geometry>
+        <cylinder radius="0.075" length="0.08" />
+      </geometry>
+      <material name="rear_right_wheel_material">
+        <color rgba="0.10 0.14 0.19 1" />
+      </material>
+    </visual>
+    <collision name="rear_right_wheel">
+      <origin xyz="-0.27 -0.385 0.075" rpy="1.5707963267948966 0 0" />
+      <geometry>
+        <cylinder radius="0.075" length="0.08" />
+      </geometry>
+    </collision>
+    <visual name="rectangle_panel">
+      <origin xyz="0.0 0 0.7849999999999999" rpy="0 0 0" />
+      <geometry>
+        <box size="0.04 0.5 1.13" />
+      </geometry>
+      <material name="rectangle_panel_material">
+        <color rgba="0.08 0.60 0.40 1" />
+      </material>
+    </visual>
+    <collision name="rectangle_panel">
+      <origin xyz="0.0 0 0.7849999999999999" rpy="0 0 0" />
+      <geometry>
+        <box size="0.04 0.5 1.13" />
+      </geometry>
+    </collision>
+    <visual name="diamond_panel">
+      <origin xyz="-0.04 0 1.7" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://goalkeeper_description/meshes/diamond_panel.stl" />
+      </geometry>
+      <material name="diamond_panel_material">
+        <color rgba="0.14 0.57 0.50 1" />
+      </material>
+    </visual>
+    <collision name="diamond_panel">
+      <origin xyz="-0.04 0 1.7" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://goalkeeper_description/meshes/diamond_panel.stl" />
+      </geometry>
+    </collision>
+    <visual name="keeper_front_decal">
+      <geometry>
+        <mesh filename="package://goalkeeper_description/meshes/keeper-front-decal.obj" />
+      </geometry>
+    </visual>
   </link>
+  <gazebo reference="keeper_chassis">
+    <selfCollide>true</selfCollide>
+    <mu1>0</mu1>
+    <mu2>0</mu2>
+  </gazebo>
   <joint name="slide_joint" type="prismatic">
     <parent link="base_link" />
-    <child link="slider_carriage" />
+    <child link="keeper_chassis" />
     <origin xyz="0 0 0" rpy="0 0 0" />
     <axis xyz="0 1 0" />
-    <limit lower="-3.2" upper="3.2" velocity="2" effort="2000" />
+    <limit lower="-2.65" upper="2.65" velocity="2" effort="650" />
   </joint>
-  <joint name="tilt_joint" type="revolute">
-    <parent link="slider_carriage" />
-    <child link="keeper_body" />
-    <origin xyz="0 0 1" rpy="0 0 0" />
-    <axis xyz="1 0 0" />
-    <limit lower="-0.7853981633974483" upper="0.7853981633974483" velocity="4" effort="2000" />
-  </joint>
+  <gazebo>
+    <plugin filename="gz-sim-joint-trajectory-controller-system" name="gz::sim::systems::JointTrajectoryController">
+      <topic>/model/goalkeeper_robot/joint_trajectory</topic>
+      <joint_name>slide_joint</joint_name>
+      <initial_position>0.0</initial_position>
+      <position_p_gain>16000</position_p_gain>
+      <position_i_gain>0</position_i_gain>
+      <position_d_gain>2300</position_d_gain>
+      <position_i_max>0</position_i_max>
+      <position_i_min>0</position_i_min>
+      <position_cmd_max>650</position_cmd_max>
+      <position_cmd_min>-650</position_cmd_min>
+    </plugin>
+    <plugin filename="gz-sim-joint-state-publisher-system" name="gz::sim::systems::JointStatePublisher">
+      <joint_name>slide_joint</joint_name>
+    </plugin>
+  </gazebo>
 </robot>

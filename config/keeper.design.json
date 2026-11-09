@@ -1,11 +1,10 @@
 {
-  "schema_version": 3,
+  "schema_version": 5,
   "hardware_enabled": false,
   "reference": {
-    "goal_standard": "IFAB Laws of the Game, Law 1: inside opening dimensions",
     "goal_source": "https://theifab.com/laws/latest/the-field-of-play/",
-    "athlete_source": "https://fdp.fifa.org/assetspublic/ce44/pdf/SquadLists-English.pdf",
-    "athlete_note": "A generic adult goalkeeper silhouette. FIFA does not prescribe player height, arm span, mass, pivot position, or motion limits."
+    "goal_decision_source": "https://theifab.com/laws/latest/determining-the-outcome-of-a-match/",
+    "note": "Solid fixed diamond panel; all mass, thickness and drive values are simulation assumptions."
   },
   "geometry": {
     "goal_width_m": 7.32,
@@ -13,124 +12,91 @@
     "goal_plane_world_x_m": 10,
     "penalty_distance_m": 11,
     "post_radius_m": 0.06,
-    "pivot_height_m": 1,
     "ball_radius_m": 0.11,
     "minimum_overlap_m": 0.05,
     "frame_clearance_m": 0.01
   },
   "keeper": {
-    "height_m": 1.9,
-    "arm_span_m": 1.9,
+    "height_m": 2.15,
     "mass_kg": 85,
-    "depth_m": 0.24,
-    "footprint": [
-      {
-        "name": "torso",
-        "center_y_m": 0,
-        "center_z_m": 0.285,
-        "width_m": 0.5,
-        "height_m": 0.61
-      },
-      {
-        "name": "neck",
-        "center_y_m": 0,
-        "center_z_m": 0.64,
-        "width_m": 0.12,
-        "height_m": 0.1
-      },
-      {
-        "name": "head",
-        "center_y_m": 0,
-        "center_z_m": 0.82,
-        "width_m": 0.24,
-        "height_m": 0.26
-      },
-      {
-        "name": "left_arm",
-        "center_y_m": 0.55,
-        "center_z_m": 0.43,
-        "width_m": 0.6,
-        "height_m": 0.18
-      },
-      {
-        "name": "right_arm",
-        "center_y_m": -0.55,
-        "center_z_m": 0.43,
-        "width_m": 0.6,
-        "height_m": 0.18
-      },
-      {
-        "name": "left_glove",
-        "center_y_m": 0.875,
-        "center_z_m": 0.43,
-        "width_m": 0.15,
-        "height_m": 0.22
-      },
-      {
-        "name": "right_glove",
-        "center_y_m": -0.875,
-        "center_z_m": 0.43,
-        "width_m": 0.15,
-        "height_m": 0.22
-      },
-      {
-        "name": "left_leg",
-        "center_y_m": 0.14,
-        "center_z_m": -0.475,
-        "width_m": 0.18,
-        "height_m": 0.95
-      },
-      {
-        "name": "right_leg",
-        "center_y_m": -0.14,
-        "center_z_m": -0.475,
-        "width_m": 0.18,
-        "height_m": 0.95
-      },
-      {
-        "name": "left_foot",
-        "center_y_m": 0.14,
-        "center_z_m": -0.89,
-        "width_m": 0.22,
-        "height_m": 0.12
-      },
-      {
-        "name": "right_foot",
-        "center_y_m": -0.14,
-        "center_z_m": -0.89,
-        "width_m": 0.22,
-        "height_m": 0.12
-      }
-    ]
+    "base": {
+      "width_m": 0.85,
+      "depth_m": 0.75,
+      "height_m": 0.22,
+      "shell_bottom_m": 0.08,
+      "shell_mass_kg": 38,
+      "wheel_radius_m": 0.075,
+      "wheel_width_m": 0.08,
+      "wheel_x_m": 0.27,
+      "wheel_mass_kg": 1
+    },
+    "rectangle": {
+      "width_m": 0.5,
+      "height_m": 1.13,
+      "thickness_m": 0.04,
+      "bottom_m": 0.22,
+      "mass_kg": 25
+    },
+    "diamond": {
+      "horizontal_diagonal_m": 1.45,
+      "vertical_diagonal_m": 0.9,
+      "thickness_m": 0.04,
+      "center_z_m": 1.7,
+      "center_x_m": -0.04,
+      "mass_kg": 18
+    }
   },
   "motion": {
     "slide": {
-      "minimum": -3.2,
-      "maximum": 3.2,
+      "minimum": -2.65,
+      "maximum": 2.65,
       "max_speed": 2,
-      "max_acceleration": 12
-    },
-    "tilt": {
-      "minimum": -0.7853981633974483,
-      "maximum": 0.7853981633974483,
-      "max_speed": 4,
-      "max_acceleration": 20
+      "max_acceleration": 4
     }
   },
   "timing": {
     "flight_time_s": 0.55,
     "processing_and_communication_s": 0.1,
-    "settling_margin_s": 0.02
+    "settling_margin_s": 0.02,
+    "front_contact_reserve_s": 0.025
   },
   "planning": {
-    "slide_search_step_m": 0.02,
-    "tilt_search_step_rad": 0.03490658503988659,
+    "slide_search_step_m": 0.01,
     "sample_period_s": 0.005
   },
-  "serial": {
-    "protocol_version": 2,
-    "baud_rate": 115200,
-    "max_command_ttl_ms": 600,
-    "link_watchdog_ms": 600
+  "simulation": {
+    "ball_mass_kg": 0.43,
+    "physics_step_s": 0.001,
+    "position_p_gain": [
+      16000
+    ],
+    "position_i_gain": [
+      0
+    ],
+    "position_d_gain": [
+      2300
+    ],
+    "position_i_max": [
+      0
+    ],
+    "effort_limit": [
+      650
+    ],
+    "trajectory_lead_s": 0.012,
+    "floor_contact_tolerance_m": 0.002
+  },
+  "scenarios": {
+    "center": {
+      "y_m": 0,
+      "z_m": 1.28
+    },
+    "low": {
+      "y_m": 0.56,
+      "z_m": 0.11
+    },
+    "high_corner": {
+      "y_m": 3.44,
+      "z_m": 2.27
+    }
   }
 }
