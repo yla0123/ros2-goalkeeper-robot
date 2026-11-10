@@ -1,8 +1,7 @@
 import rclpy
 from rclpy.node import Node
 
-from ros_gz_interfaces.msg import EntityWrench
-from ros_gz_interfaces.msg import Entity
+from ros_gz_interfaces.msg import Entity, EntityWrench
 from ros_gz_interfaces.srv import DeleteEntity, SpawnEntity
 
 # import math
@@ -18,6 +17,10 @@ class PenaltyShooter(Node):
 
         self.publisher = self.create_publisher(EntityWrench, '/world/goalkeeper_world/wrench', 10)
 
+        self._curve_publisher = self.create_publisher(EntityWrench, '/world/goalkeeper_world/wrench/persistent', 10)
+
+        self._clear_wrench_publisher = self.create_publisher(Entity, '/world/goalkeeper_world/wrench/clear', 10)
+
         self._delete_client = self.create_client(DeleteEntity, 'world/goalkeeper_world/remove')
 
         self._spawn_client = self.create_client(SpawnEntity, '/world/goalkeeper_world/create')
@@ -25,8 +28,8 @@ class PenaltyShooter(Node):
         sim_share = Path(get_package_share_directory('goalkeeper_sim'))
         self._ball_model_path = sim_share / 'models' / 'soccer_ball' / 'model.sdf'
 
-        # start the shot after 1 sec
-        self._kick_timer = self.create_timer(1.0, self._kick_after_reset) 
+        # start the shot after 5 sec
+        self._startup_timer = self.create_timer(5.0,self._start_shooting) 
 
         # Initial position
         self._ball_x = -1.0
@@ -39,44 +42,41 @@ class PenaltyShooter(Node):
     def kick_ball(self):
 
         dt = 0.001
+        curve_accel = self.generate_curve_accel()  # m/s^2 in +y direction
 
         # randomly generate shots
         target_x, target_y, target_z, flight_time = self.generate_shot()
-        vx, vy, vz = self.get_launch_velocity(target_x, target_y, target_z, flight_time)
+        vx, vy, vz = self.get_launch_velocity(target_x, target_y, target_z, flight_time, curve_accel)
 
         # Kick strength
         force_x = self._ball_mass * vx / dt
         force_y = self._ball_mass * vy / dt
         force_z = self._ball_mass * vz / dt
 
-        msg = EntityWrench()
+        # Publish a kick message 
+        kick_msg = self.create_wrench(force_x,force_y,force_z)
+        self.publisher.publish(kick_msg)
 
-        msg.entity.name = 'soccer_ball::ball_link'
-        msg.entity.type = Entity.LINK
-
-        msg.wrench.force.x = force_x
-        msg.wrench.force.y = force_y
-        msg.wrench.force.z = force_z
-
-        msg.wrench.torque.x = 0.0
-        msg.wrench.torque.y = 0.0
-        msg.wrench.torque.z = 0.0
-
-        self.publisher.publish(msg)
-
-        # self.get_logger().info(
-        #     f'Target: ({target_x:.2f}, {target_y:.2f}, {target_z:.2f}), '
-        #     f'flight time: {flight_time:.2f} s'
-        # )
-        # self.get_logger().info(
-        #     f'Launch velocity: ({vx:.2f}, {vy:.2f}, {vz:.2f}) m/s'
-        # )
+        # Publish curve msg 
+        curve_msg = self.create_wrench(0.0,self._ball_mass * curve_accel,0.0)
+        self._curve_publisher.publish(curve_msg)
 
         self.get_logger().info('Ball kicked!')
-
         self._reset_timer = self.create_timer(2.0, self._reset_after_shot)
+        self._curve_timer = self.create_timer(flight_time, self._stop_curve)
 
+        # self.get_logger().info(
+        #     f'Target=({target_x:.2f}, {target_y:.2f}, {target_z:.2f}), '
+        #     f'T={flight_time:.2f}s, curve={curve_accel:.2f} m/s^2'
+        # )
     # ============= Delete and Respawn the ball =============
+    def _start_shooting(self):
+        self._startup_timer.cancel()
+
+        self.get_logger().info('Starting penalty shots')
+
+        self.reset_ball()
+
     def reset_ball(self):
         # delete the current ball
         delete_request = DeleteEntity.Request()
@@ -136,7 +136,7 @@ class PenaltyShooter(Node):
             if response.success:
                 self.get_logger().info('Ball reset successfully')
 
-                self._kick_timer = self.create_timer(1.0, self._kick_after_reset)
+                self._kick_timer = self.create_timer(1.5, self._kick_after_reset)
                 # start another kick after 1 sec
             else:
                 self.get_logger().error('Failed to spawn ball')
@@ -154,16 +154,26 @@ class PenaltyShooter(Node):
         self._kick_timer.cancel()
         self.kick_ball()
 
-    # ========== Randomly Generate shots ===========
-    def get_launch_velocity(self, target_x, target_y, target_z, flight_time):
-        g = 9.81
+    def _stop_curve(self):
+        self._curve_timer.cancel()
 
+        entity = Entity()
+        entity.name = 'soccer_ball::ball_link'
+        entity.type = Entity.LINK
+
+        self._clear_wrench_publisher.publish(entity)
+
+    # ========== Helper Functions ===========
+    def get_launch_velocity(self, target_x, target_y, target_z, 
+    flight_time, curve_accel):
+        
+        g = 9.81
         dx = target_x - self._ball_x
         dy = target_y - self._ball_y
         dz = target_z - self._ball_z
 
         vx = dx / flight_time
-        vy = dy / flight_time
+        vy = (dy - 0.5 * curve_accel * flight_time**2) / flight_time
         vz = (dz + 0.5 * g * flight_time**2) / flight_time
 
         return vx, vy, vz
@@ -175,6 +185,37 @@ class PenaltyShooter(Node):
         flight_time = random.uniform(0.5, 0.9)
 
         return target_x, target_y, target_z, flight_time
+
+    def generate_curve_accel(self):
+        # 30% straight shots
+        if random.random() < 0.3:
+            return 0.0
+
+        # Otherwise curve left or right
+        direction = random.choice([-1.0, 1.0])
+        magnitude = random.uniform(2.0, 6.0)
+
+        return direction * magnitude
+    
+    def create_wrench(self, force_x, force_y, force_z,
+        torque_x=0.0, torque_y=0.0, torque_z=0.0):
+
+        msg = EntityWrench()
+
+        msg.entity.name = 'soccer_ball::ball_link'
+        msg.entity.type = Entity.LINK
+
+        msg.wrench.force.x = force_x
+        msg.wrench.force.y = force_y
+        msg.wrench.force.z = force_z
+
+        msg.wrench.torque.x = torque_x
+        msg.wrench.torque.y = torque_y
+        msg.wrench.torque.z = torque_z
+
+        return msg
+
+
 
 
 def main(args=None):

@@ -61,6 +61,8 @@ def generate_launch_description():
             '/world/goalkeeper_world/wrench@ros_gz_interfaces/msg/EntityWrench]gz.msgs.EntityWrench',
             '/world/goalkeeper_world/remove@ros_gz_interfaces/srv/DeleteEntity',
             '/world/goalkeeper_world/create@ros_gz_interfaces/srv/SpawnEntity',
+            '/world/goalkeeper_world/wrench/persistent@ros_gz_interfaces/msg/EntityWrench]gz.msgs.EntityWrench',
+            '/world/goalkeeper_world/wrench/clear@ros_gz_interfaces/msg/Entity]gz.msgs.Entity',
         ],
         output='screen'
     )
