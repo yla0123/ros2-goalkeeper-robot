@@ -1,0 +1,5 @@
+# The simulator and offline planner both consume keeper.design.json.
+schema_version: 6
+mode: simulation_only
+design_source: keeper.design.json
+joint_order: [slide_joint, tilt_joint]

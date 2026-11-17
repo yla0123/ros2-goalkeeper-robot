@@ -1,0 +1,211 @@
+<?xml version='1.0' encoding='utf-8'?>
+<robot name="goalkeeper_robot">
+  <!--Generated from config/keeper.design.json; run tools/generate_geometry.py.-->
+  <link name="world" />
+  <link name="base_link">
+    <inertial>
+      <mass value="0.001" />
+      <inertia ixx="1e-06" iyy="1e-06" izz="1e-06" ixy="0" ixz="0" iyz="0" />
+    </inertial>
+  </link>
+  <joint name="world_to_base" type="fixed">
+    <parent link="world" />
+    <child link="base_link" />
+    <origin xyz="0 0 0" rpy="0 0 0" />
+  </joint>
+  <link name="keeper_chassis">
+    <inertial>
+      <origin xyz="0.00169047619 0 0.150952381" rpy="0 0 0" />
+      <mass value="42" />
+      <inertia ixx="3.051995238" iyy="2.265774548" izz="4.86092931" ixy="0" ixz="-0.02407238095" iyz="0" />
+    </inertial>
+    <visual name="chassis">
+      <origin xyz="0.0 0 0.15" rpy="0 0 0" />
+      <geometry>
+        <box size="0.75 0.85 0.14" />
+      </geometry>
+      <material name="chassis_material">
+        <color rgba="0.20 0.35 0.51 1" />
+      </material>
+    </visual>
+    <collision name="chassis">
+      <origin xyz="0.0 0 0.15" rpy="0 0 0" />
+      <geometry>
+        <box size="0.75 0.85 0.14" />
+      </geometry>
+    </collision>
+    <visual name="front_left_wheel">
+      <origin xyz="0.27 0.385 0.075" rpy="1.5707963267948966 0 0" />
+      <geometry>
+        <cylinder radius="0.075" length="0.08" />
+      </geometry>
+      <material name="front_left_wheel_material">
+        <color rgba="0.10 0.14 0.19 1" />
+      </material>
+    </visual>
+    <collision name="front_left_wheel">
+      <origin xyz="0.27 0.385 0.075" rpy="1.5707963267948966 0 0" />
+      <geometry>
+        <cylinder radius="0.075" length="0.08" />
+      </geometry>
+    </collision>
+    <visual name="front_right_wheel">
+      <origin xyz="0.27 -0.385 0.075" rpy="1.5707963267948966 0 0" />
+      <geometry>
+        <cylinder radius="0.075" length="0.08" />
+      </geometry>
+      <material name="front_right_wheel_material">
+        <color rgba="0.10 0.14 0.19 1" />
+      </material>
+    </visual>
+    <collision name="front_right_wheel">
+      <origin xyz="0.27 -0.385 0.075" rpy="1.5707963267948966 0 0" />
+      <geometry>
+        <cylinder radius="0.075" length="0.08" />
+      </geometry>
+    </collision>
+    <visual name="rear_left_wheel">
+      <origin xyz="-0.27 0.385 0.075" rpy="1.5707963267948966 0 0" />
+      <geometry>
+        <cylinder radius="0.075" length="0.08" />
+      </geometry>
+      <material name="rear_left_wheel_material">
+        <color rgba="0.10 0.14 0.19 1" />
+      </material>
+    </visual>
+    <collision name="rear_left_wheel">
+      <origin xyz="-0.27 0.385 0.075" rpy="1.5707963267948966 0 0" />
+      <geometry>
+        <cylinder radius="0.075" length="0.08" />
+      </geometry>
+    </collision>
+    <visual name="rear_right_wheel">
+      <origin xyz="-0.27 -0.385 0.075" rpy="1.5707963267948966 0 0" />
+      <geometry>
+        <cylinder radius="0.075" length="0.08" />
+      </geometry>
+      <material name="rear_right_wheel_material">
+        <color rgba="0.10 0.14 0.19 1" />
+      </material>
+    </visual>
+    <collision name="rear_right_wheel">
+      <origin xyz="-0.27 -0.385 0.075" rpy="1.5707963267948966 0 0" />
+      <geometry>
+        <cylinder radius="0.075" length="0.08" />
+      </geometry>
+    </collision>
+    <visual name="hinge_support">
+      <origin xyz="0.071 0 0.49" rpy="0 0 0" />
+      <geometry>
+        <box size="0.1 0.1 0.54" />
+      </geometry>
+      <material name="hinge_support_material">
+        <color rgba="0.08 0.60 0.40 1" />
+      </material>
+    </visual>
+    <collision name="hinge_support">
+      <origin xyz="0.071 0 0.49" rpy="0 0 0" />
+      <geometry>
+        <box size="0.1 0.1 0.54" />
+      </geometry>
+    </collision>
+  </link>
+  <gazebo reference="keeper_chassis">
+    <selfCollide>true</selfCollide>
+    <mu1>0</mu1>
+    <mu2>0</mu2>
+  </gazebo>
+  <link name="keeper_board">
+    <inertial>
+      <origin xyz="-0.01674418605 0 0.6580232558" rpy="0 0 0" />
+      <mass value="43" />
+      <inertia ixx="14.51707364" iyy="12.44184283" izz="2.120185853" ixy="0" ixz="0.3830232558" iyz="0" />
+    </inertial>
+    <visual name="rectangle_panel">
+      <origin xyz="0.0 0 0.2749999999999999" rpy="0 0 0" />
+      <geometry>
+        <box size="0.04 0.5 1.21" />
+      </geometry>
+      <material name="rectangle_panel_material">
+        <color rgba="0.08 0.60 0.40 1" />
+      </material>
+    </visual>
+    <collision name="rectangle_panel">
+      <origin xyz="0.0 0 0.2749999999999999" rpy="0 0 0" />
+      <geometry>
+        <box size="0.04 0.5 1.21" />
+      </geometry>
+    </collision>
+    <visual name="diamond_panel">
+      <origin xyz="-0.04 0 1.19" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://goalkeeper_description/meshes/diamond_panel.stl" />
+      </geometry>
+      <material name="diamond_panel_material">
+        <color rgba="0.14 0.57 0.50 1" />
+      </material>
+    </visual>
+    <collision name="diamond_panel">
+      <origin xyz="-0.04 0 1.19" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://goalkeeper_description/meshes/diamond_panel.stl" />
+      </geometry>
+    </collision>
+    <visual name="keeper_front_decal">
+      <origin xyz="0 0 -0.76" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://goalkeeper_description/meshes/keeper-front-decal.obj" />
+      </geometry>
+    </visual>
+  </link>
+  <gazebo reference="keeper_board">
+    <selfCollide>true</selfCollide>
+  </gazebo>
+  <joint name="slide_joint" type="prismatic">
+    <parent link="base_link" />
+    <child link="keeper_chassis" />
+    <origin xyz="0 0 0" rpy="0 0 0" />
+    <axis xyz="0 1 0" />
+    <limit lower="-3.55" upper="3.55" velocity="17" effort="18000" />
+  </joint>
+  <joint name="tilt_joint" type="revolute">
+    <parent link="keeper_chassis" />
+    <child link="keeper_board" />
+    <origin xyz="0 0 0.76" rpy="0 0 0" />
+    <axis xyz="1 0 0" />
+    <limit lower="-1.5707963267948966" upper="1.5707963267948966" velocity="6.5" effort="9000" />
+  </joint>
+  <gazebo>
+    <plugin filename="gz-sim-joint-trajectory-controller-system" name="gz::sim::systems::JointTrajectoryController">
+      <topic>/model/goalkeeper_robot/joint_trajectory</topic>
+      <joint_name>slide_joint</joint_name>
+      <joint_name>tilt_joint</joint_name>
+      <initial_position>0.0</initial_position>
+      <initial_position>0.0</initial_position>
+      <position_p_gain>120000</position_p_gain>
+      <position_p_gain>60000</position_p_gain>
+      <position_i_gain>0</position_i_gain>
+      <position_i_gain>0</position_i_gain>
+      <position_d_gain>0</position_d_gain>
+      <position_d_gain>0</position_d_gain>
+      <position_i_max>0</position_i_max>
+      <position_i_max>0</position_i_max>
+      <velocity_p_gain>6500</velocity_p_gain>
+      <velocity_p_gain>2600</velocity_p_gain>
+      <position_i_min>0</position_i_min>
+      <position_i_min>0</position_i_min>
+      <position_cmd_max>18000</position_cmd_max>
+      <position_cmd_min>-18000</position_cmd_min>
+      <velocity_cmd_max>18000</velocity_cmd_max>
+      <velocity_cmd_min>-18000</velocity_cmd_min>
+      <position_cmd_max>9000</position_cmd_max>
+      <position_cmd_min>-9000</position_cmd_min>
+      <velocity_cmd_max>9000</velocity_cmd_max>
+      <velocity_cmd_min>-9000</velocity_cmd_min>
+    </plugin>
+    <plugin filename="gz-sim-joint-state-publisher-system" name="gz::sim::systems::JointStatePublisher">
+      <joint_name>slide_joint</joint_name>
+      <joint_name>tilt_joint</joint_name>
+    </plugin>
+  </gazebo>
+</robot>
