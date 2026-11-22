@@ -28,8 +28,8 @@ class PenaltyShooter(Node):
         sim_share = Path(get_package_share_directory('goalkeeper_sim'))
         self._ball_model_path = sim_share / 'models' / 'soccer_ball' / 'model.sdf'
 
-        # start the shot after 5 sec
-        self._startup_timer = self.create_timer(5.0,self._start_shooting) 
+        # start the shot after 2 sec
+        self._startup_timer = self.create_timer(2.0,self._start_shooting) 
 
         # Initial position
         self._ball_x = -1.0
