@@ -206,9 +206,10 @@
     <child link="keeper_panel"/>
     <origin xyz="0 0 0.22" rpy="0 0 0"/>
     <axis xyz="1 0 0"/>
-    <limit
-      lower="-1.57079632679"
-      upper="1.57079632679"
+    <!-- avoid hitting the ground -->
+    <limit 
+      lower="-1.0"
+      upper="1.0"
       velocity="6.5"
       effort="1000"/>
   </joint>

@@ -63,7 +63,12 @@ def generate_launch_description():
             '/world/goalkeeper_world/create@ros_gz_interfaces/srv/SpawnEntity',
             '/world/goalkeeper_world/wrench/persistent@ros_gz_interfaces/msg/EntityWrench]gz.msgs.EntityWrench',
             '/world/goalkeeper_world/wrench/clear@ros_gz_interfaces/msg/Entity]gz.msgs.Entity',
+
             '/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock',
+
+            '/model/goalkeeper_robot/joint_trajectory'
+            '@trajectory_msgs/msg/JointTrajectory]'
+            'gz.msgs.JointTrajectory',
         ],
         output='screen'
     )
@@ -74,6 +79,14 @@ def generate_launch_description():
         output='screen',
         parameters=[{'use_sim_time': True}],
     )
+
+    goalkeeper_control = Node(
+    package='goalkeeper_control',
+    executable='control_node',
+    output='screen',
+    parameters=[{'use_sim_time': True}]
+    )
+
     return LaunchDescription([
         set_env_vars,
         gz_sim_launch,
@@ -81,4 +94,5 @@ def generate_launch_description():
         spawn_robot,
         bridge,
         penalty_shooter,
+        goalkeeper_control,
     ])
