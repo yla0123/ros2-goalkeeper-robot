@@ -12,8 +12,8 @@ def generate_launch_description():
     desc_pkg = get_package_share_directory('goalkeeper_description')
 
     # Model geometry is generated from config/keeper.design.json.
-    world_file = os.path.join(sim_pkg, 'worlds', 'goalkeeper_world.sdf')
-    urdf_file = os.path.join(desc_pkg, 'urdf', 'goalkeeper.urdf')
+    world_file  = os.path.join(sim_pkg, 'worlds', 'goalkeeper_world.sdf')
+    urdf_file   = os.path.join(desc_pkg, 'urdf', 'goalkeeper.urdf')
     models_path = os.path.join(sim_pkg, 'models')
 
     # Add local model resources while preserving existing resource paths.
@@ -22,7 +22,7 @@ def generate_launch_description():
         value=os.pathsep.join(filter(None, [models_path, os.environ.get('GZ_SIM_RESOURCE_PATH', '')]))
     )
 
-    # Publish the generated robot description for spawning and visualization.
+    # Load and publish the goalkeeper URDF for spawning and visualization.
     with open(urdf_file, 'r') as infp:
         robot_description_content = infp.read()
 
@@ -39,7 +39,7 @@ def generate_launch_description():
         PythonLaunchDescriptionSource(
             os.path.join(get_package_share_directory('ros_gz_sim'), 'launch', 'gz_sim.launch.py')
         ),
-        launch_arguments={'gz_args': f'-r "{world_file}"'}.items()
+        launch_arguments={'gz_args': f'"{world_file}"'}.items()
     )
 
     # Spawn at ground height: the URDF defines its own pivot elevation.
@@ -63,6 +63,7 @@ def generate_launch_description():
             '/world/goalkeeper_world/create@ros_gz_interfaces/srv/SpawnEntity',
             '/world/goalkeeper_world/wrench/persistent@ros_gz_interfaces/msg/EntityWrench]gz.msgs.EntityWrench',
             '/world/goalkeeper_world/wrench/clear@ros_gz_interfaces/msg/Entity]gz.msgs.Entity',
+            '/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock',
         ],
         output='screen'
     )
@@ -70,7 +71,8 @@ def generate_launch_description():
     penalty_shooter = Node(
         package='penalty_shooter',
         executable='shooter_node',
-        output='screen'
+        output='screen',
+        parameters=[{'use_sim_time': True}],
     )
     return LaunchDescription([
         set_env_vars,

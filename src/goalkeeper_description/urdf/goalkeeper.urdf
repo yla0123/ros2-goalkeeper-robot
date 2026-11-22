@@ -1,27 +1,21 @@
-<?xml version="1.0"?>
+<?xml version="1.0" encoding="utf-8"?>
 <robot name="goalkeeper_robot">
 
-  <!-- Welt-Link als fester Bezugspunkt -->
+  <!--
+    Coordinate convention:
+      x: field depth / goal-normal direction
+      y: lateral direction across the goal
+      z: vertical direction
+  -->
+
   <link name="world"/>
 
-  <!-- Feste Basis (Montagepunkt am Tor) -->
   <link name="base_link">
-    <visual>
-      <geometry>
-        <box size="0.1 0.1 0.1"/>
-      </geometry>
-      <material name="dark_grey">
-        <color rgba="0.2 0.2 0.2 1.0"/>
-      </material>
-    </visual>
-    <collision>
-      <geometry>
-        <box size="0.1 0.1 0.1"/>
-      </geometry>
-    </collision>
     <inertial>
-      <mass value="1.0"/>
-      <inertia ixx="0.001" ixy="0.0" ixz="0.0" iyy="0.001" iyz="0.0" izz="0.001"/>
+      <mass value="0.001"/>
+      <inertia
+        ixx="1e-6" iyy="1e-6" izz="1e-6"
+        ixy="0.0" ixz="0.0" iyz="0.0"/>
     </inertial>
   </link>
 
@@ -31,91 +25,233 @@
     <origin xyz="0 0 0" rpy="0 0 0"/>
   </joint>
 
-  <!-- 1. HORIZONTALE BEWEGUNG (Links <-> Rechts entlang der Torlinie / Y-Achse) -->
-  <link name="slider_carriage">
-    <visual>
+  <!-- Sliding chassis -->
+  <link name="keeper_chassis">
+
+    <!-- Approximate chassis mass: shell 37 kg + support 1 kg + wheels 4 kg = 42 kg -->
+    <inertial>
+      <origin xyz="0 0 0.11" rpy="0 0 0"/>
+      <mass value="42.0"/>
+      <inertia
+        ixx="2.69815"
+        iyy="2.13815"
+        izz="4.49750"
+        ixy="0.0"
+        ixz="0.0"
+        iyz="0.0"/>
+    </inertial>
+
+    <visual name="chassis_visual">
+      <origin xyz="0 0 0.15" rpy="0 0 0"/>
       <geometry>
-        <box size="0.05 0.2 0.1"/>
+        <box size="0.75 0.85 0.14"/>
       </geometry>
-      <material name="blue">
-        <color rgba="0.0 0.0 0.8 1.0"/>
+      <material name="chassis_material">
+        <color rgba="0.20 0.35 0.51 1"/>
       </material>
     </visual>
-    <collision>
+
+    <collision name="chassis_collision">
+      <origin xyz="0 0 0.15" rpy="0 0 0"/>
       <geometry>
-        <box size="0.05 0.2 0.1"/>
+        <box size="0.75 0.85 0.14"/>
       </geometry>
     </collision>
-    <inertial>
-      <mass value="0.5"/>
-      <inertia ixx="0.001" ixy="0.0" ixz="0.0" iyy="0.001" iyz="0.0" izz="0.001"/>
-    </inertial>
+
+    <!-- Wheels are passive geometry. The slide_joint provides lateral motion. -->
+    <visual name="front_left_wheel_visual">
+      <origin xyz="0.27 0.385 0.075" rpy="1.57079632679 0 0"/>
+      <geometry>
+        <cylinder radius="0.075" length="0.08"/>
+      </geometry>
+      <material name="wheel_material">
+        <color rgba="0.10 0.14 0.19 1"/>
+      </material>
+    </visual>
+
+    <collision name="front_left_wheel_collision">
+      <origin xyz="0.27 0.385 0.075" rpy="1.57079632679 0 0"/>
+      <geometry>
+        <cylinder radius="0.075" length="0.08"/>
+      </geometry>
+    </collision>
+
+    <visual name="front_right_wheel_visual">
+      <origin xyz="0.27 -0.385 0.075" rpy="1.57079632679 0 0"/>
+      <geometry>
+        <cylinder radius="0.075" length="0.08"/>
+      </geometry>
+      <material name="wheel_material"/>
+    </visual>
+
+    <collision name="front_right_wheel_collision">
+      <origin xyz="0.27 -0.385 0.075" rpy="1.57079632679 0 0"/>
+      <geometry>
+        <cylinder radius="0.075" length="0.08"/>
+      </geometry>
+    </collision>
+
+    <visual name="rear_left_wheel_visual">
+      <origin xyz="-0.27 0.385 0.075" rpy="1.57079632679 0 0"/>
+      <geometry>
+        <cylinder radius="0.075" length="0.08"/>
+      </geometry>
+      <material name="wheel_material"/>
+    </visual>
+
+    <collision name="rear_left_wheel_collision">
+      <origin xyz="-0.27 0.385 0.075" rpy="1.57079632679 0 0"/>
+      <geometry>
+        <cylinder radius="0.075" length="0.08"/>
+      </geometry>
+    </collision>
+
+    <visual name="rear_right_wheel_visual">
+      <origin xyz="-0.27 -0.385 0.075" rpy="1.57079632679 0 0"/>
+      <geometry>
+        <cylinder radius="0.075" length="0.08"/>
+      </geometry>
+      <material name="wheel_material"/>
+    </visual>
+
+    <collision name="rear_right_wheel_collision">
+      <origin xyz="-0.27 -0.385 0.075" rpy="1.57079632679 0 0"/>
+      <geometry>
+        <cylinder radius="0.075" length="0.08"/>
+      </geometry>
+    </collision>
+
   </link>
 
-  <joint name="slider_joint" type="prismatic">
+  <!-- Lateral movement across the goal -->
+  <joint name="slide_joint" type="prismatic">
     <parent link="base_link"/>
-    <child link="slider_carriage"/>
-    <origin xyz="0 0 0.05" rpy="0 0 0"/>
-    <axis xyz="0 1 0"/> <!-- Bewegung entlang der Y-Achse -->
-    <limit lower="-1.2" upper="1.2" effort="50.0" velocity="2.0"/>
+    <child link="keeper_chassis"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+    <limit
+      lower="-3.55"
+      upper="3.55"
+      velocity="2.0"
+      effort="650.0"/>
   </joint>
 
+  <gazebo reference="keeper_chassis">
+    <mu1>0.0</mu1>
+    <mu2>0.0</mu2>
+  </gazebo>
 
-  <!-- 2. VERTIKALE BEWEGUNG (Nach oben ausfahren / Z-Achse) -->
-  <link name="vertical_extension">
-    <visual>
+  <!-- Tilting goalkeeper panel -->
+  <link name="keeper_panel">
+
+    <!-- Approximate combined panel mass: rectangle 25 kg + diamond 18 kg = 43 kg -->
+    <inertial>
+      <origin xyz="-0.0167 0 0.948" rpy="0 0 0"/>
+      <mass value="43.0"/>
+      <inertia
+        ixx="21.44"
+        iyy="13.91"
+        izz="7.54"
+        ixy="0.0"
+        ixz="0.0"
+        iyz="0.0"/>
+    </inertial>
+
+    <visual name="rectangle_panel_visual">
+      <origin xyz="0 0 0.565" rpy="0 0 0"/>
       <geometry>
-        <box size="0.05 0.1 0.4"/>
+        <box size="0.04 0.50 1.13"/>
       </geometry>
-      <material name="orange">
-        <color rgba="1.0 0.5 0.0 1.0"/>
+      <material name="rectangle_panel_material">
+        <color rgba="0.08 0.60 0.40 1"/>
       </material>
     </visual>
-    <collision>
+
+    <collision name="rectangle_panel_collision">
+      <origin xyz="0 0 0.565" rpy="0 0 0"/>
       <geometry>
-        <box size="0.05 0.1 0.4"/>
+        <box size="0.04 0.50 1.13"/>
       </geometry>
     </collision>
-    <inertial>
-      <mass value="0.5"/>
-      <inertia ixx="0.001" ixy="0.0" ixz="0.0" iyy="0.001" iyz="0.0" izz="0.001"/>
-    </inertial>
-  </link>
 
-  <joint name="vertical_joint" type="prismatic">
-    <parent link="slider_carriage"/>
-    <child link="vertical_extension"/>
-    <origin xyz="0 0 0.05" rpy="0 0 0"/>
-    <axis xyz="0 0 1"/> <!-- Bewegung entlang der Z-Achse nach oben -->
-    <limit lower="0.0" upper="0.6" effort="30.0" velocity="1.5"/>
-  </joint>
-
-
-  <!-- 3. DIE ABWEHRPLATTE / ARME -->
-  <link name="defense_plate">
-    <visual>
+    <visual name="diamond_panel_visual">
+      <origin xyz="-0.04 0 1.48" rpy="0 0 0"/>
       <geometry>
-        <box size="0.05 0.6 0.2"/>
+        <mesh filename="package://goalkeeper_description/meshes/diamond_panel.stl"/>
       </geometry>
-      <material name="red">
-        <color rgba="0.8 0.0 0.0 1.0"/>
+      <material name="diamond_panel_material">
+        <color rgba="0.14 0.57 0.50 1"/>
       </material>
     </visual>
-    <collision>
+
+    <collision name="diamond_panel_collision">
+      <origin xyz="-0.04 0 1.48" rpy="0 0 0"/>
       <geometry>
-        <box size="0.05 0.6 0.2"/>
+        <mesh filename="package://goalkeeper_description/meshes/diamond_panel.stl"/>
       </geometry>
     </collision>
-    <inertial>
-      <mass value="0.8"/>
-      <inertia ixx="0.001" ixy="0.0" ixz="0.0" iyy="0.001" iyz="0.0" izz="0.001"/>
-    </inertial>
+
+    <visual name="keeper_front_decal">
+      <origin xyz="0 0 -0.22" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="package://goalkeeper_description/meshes/keeper-front-decal.obj"/>
+      </geometry>
+    </visual>
+
   </link>
 
-  <joint name="plate_fixed_joint" type="fixed">
-    <parent link="vertical_extension"/>
-    <child link="defense_plate"/>
-    <origin xyz="0 0 0.25" rpy="0 0 0"/>
+  <!-- Tilt left/right in the y-z plane around the x axis -->
+  <joint name="tilt_joint" type="revolute">
+    <parent link="keeper_chassis"/>
+    <child link="keeper_panel"/>
+    <origin xyz="0 0 0.22" rpy="0 0 0"/>
+    <axis xyz="1 0 0"/>
+    <limit
+      lower="-1.57079632679"
+      upper="1.57079632679"
+      velocity="6.5"
+      effort="1000"/>
   </joint>
+
+  <!-- Gazebo joint control -->
+  <gazebo>
+
+    <plugin
+      filename="gz-sim-joint-trajectory-controller-system"
+      name="gz::sim::systems::JointTrajectoryController">
+
+      <topic>/model/goalkeeper_robot/joint_trajectory</topic>
+
+      <joint_name>slide_joint</joint_name>
+      <initial_position>0.0</initial_position>
+      <position_p_gain>800</position_p_gain>
+      <position_i_gain>0</position_i_gain>
+      <position_d_gain>250</position_d_gain>
+      <position_i_max>0</position_i_max>
+      <position_i_min>0</position_i_min>
+      <position_cmd_max>650</position_cmd_max>
+      <position_cmd_min>-650</position_cmd_min>
+
+      <joint_name>tilt_joint</joint_name>
+      <initial_position>0.0</initial_position>
+      <position_p_gain>1200</position_p_gain>
+      <position_i_gain>0</position_i_gain>
+      <position_d_gain>400</position_d_gain>
+      <position_i_max>0</position_i_max>
+      <position_i_min>0</position_i_min>
+      <position_cmd_max>1500</position_cmd_max>
+      <position_cmd_min>-1500</position_cmd_min>
+
+    </plugin>
+
+    <plugin
+      filename="gz-sim-joint-state-publisher-system"
+      name="gz::sim::systems::JointStatePublisher">
+      <joint_name>slide_joint</joint_name>
+      <joint_name>tilt_joint</joint_name>
+    </plugin>
+
+  </gazebo>
 
 </robot>
+
