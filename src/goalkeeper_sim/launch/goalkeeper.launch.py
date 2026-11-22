@@ -73,6 +73,20 @@ def generate_launch_description():
         output='screen'
     )
 
+    camera_bridge = Node(
+    package='ros_gz_image',
+    executable='image_bridge',
+    arguments=['/goalkeeper/camera/image'],
+    output='screen'
+    )
+
+    depth_bridge = Node(
+    package='ros_gz_image',
+    executable='image_bridge',
+    arguments=['/goalkeeper/camera/depth_image'],
+    output='screen'
+    )
+    
     penalty_shooter = Node(
         package='penalty_shooter',
         executable='shooter_node',
@@ -93,6 +107,8 @@ def generate_launch_description():
         robot_state_publisher_node,
         spawn_robot,
         bridge,
+        camera_bridge,
+        depth_bridge,
         penalty_shooter,
         goalkeeper_control,
     ])

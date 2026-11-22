@@ -28,8 +28,8 @@ class PenaltyShooter(Node):
         sim_share = Path(get_package_share_directory('goalkeeper_sim'))
         self._ball_model_path = sim_share / 'models' / 'soccer_ball' / 'model.sdf'
 
-        # start the shot after 2 sec
-        self._startup_timer = self.create_timer(2.0,self._start_shooting) 
+        # start the shot after 1.5 sec
+        self._startup_timer = self.create_timer(1.5,self._start_shooting) 
 
         # Initial position
         self._ball_x = -1.0
@@ -38,6 +38,9 @@ class PenaltyShooter(Node):
 
         self._ball_mass = 0.43
         self._goal_x = 10.0
+
+        self._curve_timer = None
+        self._spawn_delay_timer = None
 
     def kick_ball(self):
 
@@ -62,7 +65,7 @@ class PenaltyShooter(Node):
         self._curve_publisher.publish(curve_msg)
 
         self.get_logger().info('Ball kicked!')
-        self._reset_timer = self.create_timer(2.0, self._reset_after_shot)
+        self._reset_timer = self.create_timer(1.5, self._reset_after_shot)
         self._curve_timer = self.create_timer(flight_time, self._stop_curve)
 
         # self.get_logger().info(
@@ -78,7 +81,15 @@ class PenaltyShooter(Node):
         self.reset_ball()
 
     def reset_ball(self):
-        # delete the current ball
+
+        # Stop any remaining persistent curve force
+        self._clear_curve()
+
+        # Prevent the old curve timer from firing later
+        if self._curve_timer is not None:
+            self._curve_timer.cancel()
+
+        # Delete the current ball
         delete_request = DeleteEntity.Request()
 
         delete_request.entity.name = 'soccer_ball'
@@ -98,14 +109,17 @@ class PenaltyShooter(Node):
                 self.get_logger().error('Failed to delete ball')
                 return
 
-            # when ball is deleted successfully, run _spawn_ball() 
-            self._spawn_ball()
+            # Wait briefly before spawning a new model with the same name.
+            self._spawn_delay_timer = self.create_timer(0.1,self._spawn_after_delete)
 
         except Exception as e:
             self.get_logger().error(f'Delete failed: {e}')
 
-    def _spawn_ball(self):
+    def _spawn_after_delete(self):
+        self._spawn_delay_timer.cancel()
+        self._spawn_ball()
 
+    def _spawn_ball(self):
         # read the model
         with open(self._ball_model_path, 'r') as file:
             sdf_string = file.read()
@@ -154,14 +168,15 @@ class PenaltyShooter(Node):
         self._kick_timer.cancel()
         self.kick_ball()
 
-    def _stop_curve(self):
-        self._curve_timer.cancel()
-
+    def _clear_curve(self):
         entity = Entity()
         entity.name = 'soccer_ball::ball_link'
         entity.type = Entity.LINK
-
         self._clear_wrench_publisher.publish(entity)
+
+    def _stop_curve(self):
+        self._curve_timer.cancel()
+        self._clear_curve()
 
     # ========== Helper Functions ===========
     def get_launch_velocity(self, target_x, target_y, target_z, 
