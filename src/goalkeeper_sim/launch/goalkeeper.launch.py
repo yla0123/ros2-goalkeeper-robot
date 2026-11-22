@@ -74,17 +74,17 @@ def generate_launch_description():
     )
 
     camera_bridge = Node(
-    package='ros_gz_image',
-    executable='image_bridge',
-    arguments=['/goalkeeper/camera/image'],
-    output='screen'
+        package='ros_gz_image',
+        executable='image_bridge',
+        arguments=['/goalkeeper/camera/image'],
+        output='screen'
     )
 
     depth_bridge = Node(
-    package='ros_gz_image',
-    executable='image_bridge',
-    arguments=['/goalkeeper/camera/depth_image'],
-    output='screen'
+        package='ros_gz_image',
+        executable='image_bridge',
+        arguments=['/goalkeeper/camera/depth_image'],
+        output='screen'
     )
     
     penalty_shooter = Node(
@@ -95,12 +95,20 @@ def generate_launch_description():
     )
 
     goalkeeper_control = Node(
-    package='goalkeeper_control',
-    executable='control_node',
-    output='screen',
-    parameters=[{'use_sim_time': True}]
+        package='goalkeeper_control',
+        executable='control_node',
+        output='screen',
+        parameters=[{'use_sim_time': True}]
     )
 
+    camera_viewer = Node(
+        package='goalkeeper_planner',
+        executable='camera_viewer',
+        output='screen',
+        parameters=[{
+            'use_sim_time': True
+        }]
+    )
     return LaunchDescription([
         set_env_vars,
         gz_sim_launch,
@@ -111,4 +119,5 @@ def generate_launch_description():
         depth_bridge,
         penalty_shooter,
         goalkeeper_control,
+        camera_viewer,
     ])
