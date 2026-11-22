@@ -1,17 +1,6 @@
 # MIE1075 Project: Autonomous Goalkeeper Robot
 
 This project is built for the MIE1075 course and aims to develop a simulation of an autonomous robotic goalkeeper for penalty kicks.
-
-## Environment
-
-The project is developed and tested using the following environment:
-
-- **Operating System:** Ubuntu 24.04 LTS (WSL2)
-- **ROS 2:** Jazzy Jalisco
-- **Simulator:** Gazebo Harmonic
-- **Build System:** `colcon`
-- **Languages:** C++ and Python
-
 ## Package Overview
 
 - **`goalkeeper_description`**  

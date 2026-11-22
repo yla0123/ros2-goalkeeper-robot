@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="510" viewBox="0 0 1100 510">
+<rect width="1100" height="510" fill="#f7fafc"/>
+<g font-family="Arial, sans-serif" fill="#162b3e">
+<text x="55" y="42" font-size="26" font-weight="bold">Regulation goal and adult goalkeeper scale</text>
+<text x="55" y="70" font-size="15">Front view | 1.90 m human-shaped body | original slide + tilt motion</text>
+<rect x="147.400" y="136.600" width="805.200" height="268.400" fill="#e9f4ee"/>
+<path d="M 140.800 405 V 130.000 H 959.200 V 405" fill="none" stroke="#8295a4" stroke-width="13.200"/>
+<line x1="80" y1="405" x2="1020" y2="405" stroke="#376b4c" stroke-width="2"/>
+<rect x="522.500" y="230.100" width="55.000" height="67.100" fill="#169b58" stroke="#162b3e" stroke-width="1"/>
+<rect x="543.400" y="219.100" width="13.200" height="11.000" fill="#d4a577" stroke="#162b3e" stroke-width="1"/>
+<rect x="536.800" y="190.500" width="26.400" height="28.600" fill="#d4a577" stroke="#162b3e" stroke-width="1"/>
+<rect x="456.500" y="237.800" width="66.000" height="19.800" fill="#169b58" stroke="#162b3e" stroke-width="1"/>
+<rect x="577.500" y="237.800" width="66.000" height="19.800" fill="#169b58" stroke="#162b3e" stroke-width="1"/>
+<rect x="445.500" y="235.600" width="16.500" height="24.200" fill="#f5f7f9" stroke="#162b3e" stroke-width="1"/>
+<rect x="638.000" y="235.600" width="16.500" height="24.200" fill="#f5f7f9" stroke="#162b3e" stroke-width="1"/>
+<rect x="524.700" y="295.000" width="19.800" height="104.500" fill="#23394c" stroke="#162b3e" stroke-width="1"/>
+<rect x="555.500" y="295.000" width="19.800" height="104.500" fill="#23394c" stroke="#162b3e" stroke-width="1"/>
+<rect x="522.500" y="386.300" width="24.200" height="13.200" fill="#23394c" stroke="#162b3e" stroke-width="1"/>
+<rect x="553.300" y="386.300" width="24.200" height="13.200" fill="#23394c" stroke="#162b3e" stroke-width="1"/>
+<text x="550" y="113" text-anchor="middle" font-size="20">7.32 m clear opening</text>
+<text x="975" y="265" font-size="20">2.44 m</text>
+<text x="550" y="438" text-anchor="middle" font-size="16">Keeper: 1.90 m body height; 1.90 m hand-to-hand span</text>
+<text x="550" y="466" text-anchor="middle" font-size="14">Rigid silhouette on a fixed pivot; 0.05 m foot clearance in the mounted upright pose</text>
+<text x="550" y="490" text-anchor="middle" font-size="14">Goal dimensions: IFAB Law 1. Body proportions and motion limits: simulation assumptions.</text>
+</g></svg>
