@@ -4,23 +4,31 @@ This project is built for the MIE1075 course and aims to develop a simulation of
 ## Package Overview
 
 - **`goalkeeper_description`**  
-  Contains the physical description of the goalkeeper robot, including its URDF model and mesh files.
+  Contains the physical description of the goalkeeper robot, including the URDF model, mesh files, RGB-D camera, and joint definitions for lateral sliding and body tilting.
 
 - **`goalkeeper_sim`**  
-  Contains the Gazebo world, simulation models, and the main launch file used to start the complete simulation.
+  Contains the Gazebo world, simulation models, ROS-Gazebo bridges, and the main launch file used to start the complete simulation.
 
 - **`penalty_shooter`**  
-  Contains the ROS 2 node responsible for generating penalty shots with randomized target positions, flight times, and curved trajectories.
+  Contains the ROS 2 node responsible for generating penalty shots with randomized target positions, flight times, launch velocities, and curved trajectories.
 
-## Planned Components
+- **`goalkeeper_control`**  
+  Contains the low-level goalkeeper control node. It receives desired goalkeeper motion targets and publishes joint trajectory commands for the sliding and tilting joints.
+
+- **`goalkeeper_planner`**  
+  Contains the perception and planning components of the goalkeeper system. The current camera viewer node subscribes to the goalkeeper RGB camera stream and displays the incoming images. Future nodes will handle ball detection, 3D position estimation, trajectory prediction, and interception planning.
+
+## System Components
 
 - Soccer field and goal simulation
-- Penalty shot generation
-- Ball detection and tracking
-- Ball trajectory prediction
-- Goalkeeper localization
-- Interception planning
-- Goalkeeper motion control
+- Automated randomized penalty shot generation
+- RGB-D camera perception
+- Camera image visualization
+- Goalkeeper lateral and tilting motion control
+- Ball detection and tracking *(in development)*
+- 3D ball position estimation *(in development)*
+- Ball trajectory prediction *(planned)*
+- Interception planning *(planned)*
 
 ## Build and Launch
 
