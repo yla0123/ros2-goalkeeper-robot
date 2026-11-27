@@ -24,7 +24,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'camera_viewer = goalkeeper_planner.camera_viewer:main',
+            'camera = goalkeeper_planner.camera:main',
         ],
     },
 )

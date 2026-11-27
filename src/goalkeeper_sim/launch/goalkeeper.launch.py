@@ -101,9 +101,9 @@ def generate_launch_description():
         parameters=[{'use_sim_time': True}]
     )
 
-    camera_viewer = Node(
+    camera = Node(
         package='goalkeeper_planner',
-        executable='camera_viewer',
+        executable='camera',
         output='screen',
         parameters=[{
             'use_sim_time': True
@@ -119,5 +119,5 @@ def generate_launch_description():
         depth_bridge,
         penalty_shooter,
         goalkeeper_control,
-        camera_viewer,
+        camera,
     ])

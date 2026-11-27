@@ -3,6 +3,11 @@
 
   <world name="goalkeeper_world">
 
+    <scene>
+        <ambient>0.4 0.4 0.4 1</ambient>
+        <background>0.4 0.6 0.9 1</background>
+    </scene>
+    
     <!-- Physics settings -->
     <physics name="default_physics" type="ode"> 
         <!-- Use ode physics engine -->
